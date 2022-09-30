@@ -1,7 +1,5 @@
 
 
-
-
 class Point2D:
 
     def __init__ (self, x, z):
@@ -17,7 +15,7 @@ class Point2D:
 
 
 
-class Environment:
+class Environment2D:
 
     def __init__ (self, source: Point2D, floor, ceiling):
         self.__source = source
@@ -30,19 +28,24 @@ class Environment:
 #         pass
 
 
-class Ray:
 
-    def __init__ (self, env: Environment):
-        self.__env = env
+
+
+class Ray2D:
+
+    def __init__ (self, env: Environment2D):
+        self.env = env
 
     def propagate (self):
         pass
 
 
-class Simulation:
+class Simulation2D:
 
-    def __init__ (self, env: Environment, *rays: Ray):
-        self.__rays = rays  # ordered by angle??
+    def __init__ (self, env: Environment2D):
         self.__env = env
+        self.__rays = list()
 
-    pass
+    def add_ray (self):
+        pass
+
