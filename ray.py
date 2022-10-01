@@ -1,3 +1,5 @@
+from environment import Environment2D
+
 class Ray2D:
 
     def __init__ (self, env: Environment2D, angle):
