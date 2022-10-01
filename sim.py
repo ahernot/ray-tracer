@@ -1,4 +1,4 @@
-
+from ray import Ray2D
 
 class Point2D:
 
