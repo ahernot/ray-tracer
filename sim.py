@@ -30,14 +30,7 @@ class Environment2D:
 
 
 
-class Ray2D:
 
-    def __init__ (self, env: Environment2D, angle):
-        self.__env = env
-        self.__angle = angle
-
-    def propagate (self):  # propagation params
-        pass
 
 
 
@@ -59,7 +52,7 @@ class Simulation2D:
 
         for angle in angles:
             # Generate ray
-            ray = Ray2D (env=self.__env, angle=angle)
+            ray = Ray2D (env=self.__env, angle=angle)  # more params
             ray.propagate()  # feed propagation params for the simulation
 
             # Add ray to simulation
@@ -70,4 +63,8 @@ class Simulation2D:
         self.n_angles = len(self.__angles)
 
     def plot (self):
+        pass
+
+    def save (self):
+        # save as a file
         pass
