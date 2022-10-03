@@ -9,6 +9,8 @@ from environment import Environment2D
 
 DX_MAX_DEFAULT = 0.1
 DZ_MAX_DEFAULT = 0.1
+N_STEPS_MAX = 100000
+N_REBOUNDS_MAX = -1  # -1=infinity
 
 
 # TODO New version: each ray is subdivided into segments and with each rebound new subclasses are created as a tree (can have multiple branches per rebound)
@@ -16,9 +18,19 @@ DZ_MAX_DEFAULT = 0.1
 class Ray2D:
 
     def __init__ (self, env: Environment2D, source: Point2D, angle, **kwargs):
-        self.__source = source
-        self.__env = env
+        """
+        :param env:
+        :param source:
+        :param angle: Casting angle, in radians
+        """
+
+        self.__source: Point2D = source
+        self.__env: Environment2D = env
         self.__angle_init = angle
+        self.__is_propagated = False
+
+        self.n_steps_max = kwargs.get('n_steps_max', N_STEPS_MAX)
+        self.n_rebounds_max = kwargs.get('n_rebounds_max', N_REBOUNDS_MAX)
 
         # Minimum resolutions
         self.dx_max = kwargs.get('dx_max', DX_MAX_DEFAULT)
@@ -28,19 +40,17 @@ class Ray2D:
         self.X = np.array([self.__source.x, ])
         self.Z = np.array([self.__source.z, ])
 
+
     def __repr__ (self):
         return f'Ray object'  # TODO: improve repr
 
     def propagate (self):  # TODO: add propagation params
-        max_rebounds = -1  # infinity
-        max_iter = 100000 # to change
-
+        if self.__is_propagated: return
 
         # Initialise
         angle = -1 * self.__angle_init + (np.pi / 2)  # convert angle notation
-        x = self.__source.x
-        z = self.__source.z
-        dx_z   = 1 / np.tan(angle)
+        x, z = self.__source.coordinates()
+        dx_z = 1 / np.tan(angle)
         dxdx_z = 0  # no initial curvature
         # Initialise solver
         c0 = self.calc_c(0)
@@ -48,7 +58,7 @@ class Ray2D:
 
 
 
-        for i in range(max_iter):
+        for i in range(self.n_steps_max):
 
             # Calculate new integration segment with angle from previous step
             if np.abs(dx_z) > self.dx_z_max:  # steeper slope => limit dz=dz_max
@@ -91,4 +101,6 @@ class Ray2D:
 
         # # Generate interpolated path function
         # self.Z_func = interpolate.interp1d(self.X, self.Z, kind='linear')
+
+        self.__is_propagated = True
         
