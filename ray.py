@@ -1,9 +1,16 @@
 # 2D Ray Propagation Model (v3.0)
 # Copyright Anatole Hernot (Mines Paris), 2022. All rights reserved.
 
-from numpy import np
+import numpy as np
 
 from geometry import Point2D, Vector2D
+from physics.absorption_model import calc_absorption_dB
+from physics.profile_velocity import calc_c, calc_dz_c
+from physics.profile_salinity import calc_S
+from physics.profile_temperature import calc_T
+from physics.profile_ph import calc_pH
+from physics.surface_reflection_model import calc_refcoef_surface
+from physics.reflection import reflection_coefficient
 from environment import Environment2D
 
 
@@ -14,6 +21,7 @@ N_REBOUNDS_MAX = -1  # -1=infinity
 
 
 # TODO New version: each ray is subdivided into segments and with each rebound new subclasses are created as a tree (can have multiple branches per rebound)
+# TODO: generalise as calc_c(x, z) and derive using numpy => use matrices for calculations (set resolution) / use 2D functions for calculations
 
 class Ray2D:
 
@@ -35,6 +43,7 @@ class Ray2D:
         # Minimum resolutions
         self.dx_max = kwargs.get('dx_max', DX_MAX_DEFAULT)
         self.dz_max = kwargs.get('dz_max', DZ_MAX_DEFAULT)
+        self.dx_z_max = np.abs(self.dz_max / self.dx_max)
 
         # Initialise
         self.X = np.array([self.__source.x, ])
@@ -44,7 +53,7 @@ class Ray2D:
     def __repr__ (self):
         return f'Ray object'  # TODO: improve repr
 
-    def propagate (self):  # TODO: add propagation params
+    def propagate (self, calc_c=calc_c, calc_dz_c=calc_dz_c):
         if self.__is_propagated: return
 
         # Initialise
@@ -53,7 +62,7 @@ class Ray2D:
         dx_z = 1 / np.tan(angle)
         dxdx_z = 0  # no initial curvature
         # Initialise solver
-        c0 = self.calc_c(0)
+        c0 = calc_c(0)
         mult = -1 * np.power(c0 / np.sin(angle), 2)  # differential equation multiplier
 
 
@@ -71,6 +80,8 @@ class Ray2D:
             x_new = x + dx
             z_new = z + dz
 
+            # print(f'DEBUG: {x}, {z} => {x_new}, {z_new}')
+
 
 
             # Check backwards propagation (if not allowed): TODO
@@ -80,9 +91,13 @@ class Ray2D:
             # ceiling
 
             # Check simulation bounds (!!!! USE NEW X, Z AFTER REFLECTION EVENT)
-            if x not in range (self.__env.range_min.x, self.__env.range_max.x) or z not in range (self.__env.range_min.z, self.__env.range_max.z):
-                print('out of bounds. stopping')
+            if x_new < self.__env.range_min.x or x_new >= self.__env.range_max.x:
                 # TODO: plot last point at x = xmax or z = zmax
+                print('DEBUG: out of bounds (x-axis)')
+                break
+            if z_new < self.__env.range_min.z or z_new >= self.__env.range_max.z:
+                # TODO: plot last point at x = xmax or z = zmax
+                print('DEBUG: out of bounds (z-axis)')
                 break
 
         
@@ -93,8 +108,8 @@ class Ray2D:
             x = x_new
             z = z_new
             # Calculate new point's properties
-            c = self.calc_c (z_new)
-            dz_c = self.calc_dz_c (z_new)
+            c = calc_c (z_new)
+            dz_c = calc_dz_c (z_new)
             # Update derivatives
             dxdx_z = mult * dz_c / np.power(c, 3)
             dx_z += dxdx_z * dx
@@ -103,4 +118,3 @@ class Ray2D:
         # self.Z_func = interpolate.interp1d(self.X, self.Z, kind='linear')
 
         self.__is_propagated = True
-        
