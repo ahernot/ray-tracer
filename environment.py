@@ -21,9 +21,10 @@ class Environment2D:
         self.ceil = ceiling
 
         res = 10000
+        mult = res / self.range_max.x
         x = np.linspace(self.range_min.x, self.range_max.x, res)
-        self.dx_floor = interpolate.interp1d(x, np.gradient(self.floor(x)), kind='quadratic')  # floor is static
-        self.dx_ceil = interpolate.interp1d(x, np.gradient(self.ceil(x)), kind='quadratic')  # ceiling is static
+        self.dx_floor = interpolate.interp1d(x, np.gradient(self.floor(x)) * mult, kind='quadratic')  # floor is static
+        self.dx_ceil = interpolate.interp1d(x, np.gradient(self.ceil(x)) * mult, kind='quadratic')  # ceiling is static
 
         # reflection power coefficient as a function of distance
 
