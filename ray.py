@@ -7,7 +7,7 @@ from scipy import interpolate  # TODO
 from scipy.optimize import fsolve
 from scipy.misc import derivative  # TODO
 
-from geometry import Point2D, Vector2D, intersect
+from geometry import Point2D, Vector2D
 from physics.absorption_model import calc_absorption_dB
 from physics.profile_velocity import calc_c, calc_dz_c
 from physics.profile_salinity import calc_S
@@ -18,7 +18,7 @@ from physics.reflection import reflection_coefficient
 from environment import Environment2D
 
 
-DX_MAX_DEFAULT = 0.1
+DX_MAX_DEFAULT = 1.0  # 0.1
 DZ_MAX_DEFAULT = 0.1
 N_STEPS_MAX = 100000
 N_REBOUNDS_MAX = -1  # -1=infinity
@@ -95,8 +95,6 @@ class Ray2D:
 
             # Check backwards propagation (if not allowed): TODO
 
-
-            # Check reflections > NOTE: intersections are calculated with a fineness of dx (no complex segment intersection algorithm followed by a solver)
             
             if self.__env.floor and z_new < self.__env.floor(x_new):
                 x_new = float( self.func_solve( lambda x1: self.__env.floor(x) - dx_z * (x1 - x) - z, x0=x ))
@@ -105,7 +103,12 @@ class Ray2D:
                 u = np.array([1., self.__env.dx_floor(x_new)])  # Direction of floor
                 n = np.array([-1*u[1], u[0]])  # Normal of floor, going up
                 l = np.dot(k, u)*u - np.dot(k, n)*n  # Direction of reflected ray
-                dx_z = np.dot(l, np.array([0, 1])) / np.dot(l, np.array([1, 0]))
+                print(k, u, n, l)
+                if l[0] < 0:
+                    print('backwards')
+                    break
+                dx_z = l[1] / l[0]
+                print(f'DEBUG: Ground rebound. New dir: {dx_z}')
         
             if self.__env.ceil and z_new > self.__env.ceil(x_new):
                 x_new = float( self.func_solve( lambda x1: self.__env.ceil(x) - dx_z * (x1 - x) - z, x0=x ))
@@ -114,7 +117,11 @@ class Ray2D:
                 u = np.array([1., self.__env.dx_ceil(x_new)])  # Direction of floor
                 n = np.array([u[1], -1*u[0]])  # Normal of floor, going down
                 l = np.dot(k, u)*u - np.dot(k, n)*n  # Direction of reflected ray
-                dx_z = np.dot(l, np.array([0, 1])) / np.dot(l, np.array([1, 0]))
+                if l[0] < 0:
+                    print('backwards')
+                    break
+                dx_z = l[1] / l[0]
+                print(f'DEBUG: Surface rebound. New dir: {dx_z}')
 
             # Check simulation bounds (!!!! USE NEW X, Z AFTER REFLECTION EVENT)
             if x_new < self.__env.range_min.x or x_new > self.__env.range_max.x:
@@ -139,6 +146,10 @@ class Ray2D:
             # Update derivatives for next integration segment
             dxdx_z = mult * dz_c / np.power(c, 3)
             dx_z += dxdx_z * dx
+
+
+            if i == self.n_steps_max - 1:
+                print('MAX ITER')
 
         # # Generate interpolated path function
         # self.Z_func = interpolate.interp1d(self.X, self.Z, kind='linear')
