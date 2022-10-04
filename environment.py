@@ -1,3 +1,6 @@
+import numpy as np
+from scipy import interpolate
+
 from geometry import Point2D, Vector2D
 
 
@@ -12,11 +15,15 @@ class Environment2D:
         self.range_min = Vector2D (0, -1000)
         self.range_max = Vector2D (100000, 0)
 
+        self.floor = floor
+        self.ceil = ceiling
+
+        res = 10000
+        x = np.linspace(self.range_min.x, self.range_max.x, res)
+        self.dx_floor = interpolate.interp1d(x, np.gradient(floor(x)), kind='quadratic')  # floor is static
 
         # reflection power coefficient as a function of distance
 
-    def __generate_normals (self):
-        pass
 
 # class EnvironmentStatic (Environment):
 #     def __init__ (self, source: Point2D, floor, ceiling):
