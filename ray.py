@@ -98,27 +98,23 @@ class Ray2D:
 
             # Check reflections > NOTE: intersections are calculated with a fineness of dx (no complex segment intersection algorithm followed by a solver)
             
-            if self.__env.floor:
-                fx, fxn = self.__env.floor(x), self.__env.floor(x_new)
-                if z_new < fxn or (abs(z - fx) < 2 * self.dz_max and intersect(Point2D(x, z), Point2D(x_new, z_new), Point2D(x, fx), Point2D(x_new, fxn))):
-                    x_new = float( self.func_solve( lambda x1: fx - dx_z * (x1 - x) - z, x0=x ))
-                    z_new = self.__env.floor(x_new)
-                    k = np.array([1., dx_z])  # Direction of incident ray
-                    u = np.array([1., self.__env.dx_floor(x_new)])  # Direction of floor
-                    n = np.array([-1*u[1], u[0]])  # Normal of floor, going up
-                    l = np.dot(k, u)*u - np.dot(k, n)*n  # Direction of reflected ray
-                    dx_z = np.dot(l, np.array([0, 1])) / np.dot(l, np.array([1, 0]))
+            if self.__env.floor and z_new < self.__env.floor(x_new):
+                x_new = float( self.func_solve( lambda x1: self.__env.floor(x) - dx_z * (x1 - x) - z, x0=x ))
+                z_new = self.__env.floor(x_new)
+                k = np.array([1., dx_z])  # Direction of incident ray
+                u = np.array([1., self.__env.dx_floor(x_new)])  # Direction of floor
+                n = np.array([-1*u[1], u[0]])  # Normal of floor, going up
+                l = np.dot(k, u)*u - np.dot(k, n)*n  # Direction of reflected ray
+                dx_z = np.dot(l, np.array([0, 1])) / np.dot(l, np.array([1, 0]))
         
-            if self.__env.ceil:
-                cx, cxn = self.__env.ceil(x), self.__env.ceil(x_new)
-                if z_new > cxn or (abs(z - cx) < 2 * self.dz_max and intersect(Point2D(x, z), Point2D(x_new, z_new), Point2D(x, cx), Point2D(x_new, cxn))):
-                    x_new = float( self.func_solve( lambda x1: cx - dx_z * (x1 - x) - z, x0=x ))
-                    z_new = self.__env.ceil(x_new)
-                    k = np.array([1., dx_z])  # Direction of incident ray
-                    u = np.array([1., self.__env.dx_ceil(x_new)])  # Direction of floor
-                    n = np.array([u[1], -1*u[0]])  # Normal of floor, going down
-                    l = np.dot(k, u)*u - np.dot(k, n)*n  # Direction of reflected ray
-                    dx_z = np.dot(l, np.array([0, 1])) / np.dot(l, np.array([1, 0]))
+            if self.__env.ceil and z_new > self.__env.ceil(x_new):
+                x_new = float( self.func_solve( lambda x1: self.__env.ceil(x) - dx_z * (x1 - x) - z, x0=x ))
+                z_new = self.__env.ceil(x_new)
+                k = np.array([1., dx_z])  # Direction of incident ray
+                u = np.array([1., self.__env.dx_ceil(x_new)])  # Direction of floor
+                n = np.array([u[1], -1*u[0]])  # Normal of floor, going down
+                l = np.dot(k, u)*u - np.dot(k, n)*n  # Direction of reflected ray
+                dx_z = np.dot(l, np.array([0, 1])) / np.dot(l, np.array([1, 0]))
 
             # Check simulation bounds (!!!! USE NEW X, Z AFTER REFLECTION EVENT)
             if x_new < self.__env.range_min.x or x_new > self.__env.range_max.x:
