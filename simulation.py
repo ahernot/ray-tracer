@@ -33,8 +33,14 @@ class Simulation2D:
         self.n_angles = len(self.__angles)
 
     def plot (self):
+        # Plot environment (floor & ceiling for now)
+        # Plot rays (or selection of rays)
         pass
 
     def save (self):
         # save as a file
+        pass
+
+    def extract (self):
+        # Return new Simulation with only the selected rays
         pass
