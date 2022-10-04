@@ -3,6 +3,10 @@
 
 import numpy as np
 
+from scipy import interpolate  # TODO
+from scipy.optimize import fsolve
+from scipy.misc import derivative  # TODO
+
 from geometry import Point2D, Vector2D
 from physics.absorption_model import calc_absorption_dB
 from physics.profile_velocity import calc_c, calc_dz_c
@@ -24,13 +28,18 @@ N_REBOUNDS_MAX = -1  # -1=infinity
 # TODO: generalise as calc_c(x, z) and derive using numpy => use matrices for calculations (set resolution) / use 2D functions for calculations
 
 class Ray2D:
+    # Only one child ray per reflection: highest intensity specular reflection only
 
     def __init__ (self, env: Environment2D, source: Point2D, angle, **kwargs):
         """
-        :param env:
-        :param source:
+        :param env: Simulation environment
+        :param source: Source point
         :param angle: Casting angle, in radians
         """
+
+        # Solver functions
+        self.calc_der = kwargs.get('calc_der', derivative)
+        self.func_solve = kwargs.get('func_solve', fsolve)
 
         self.__source: Point2D = source
         self.__env: Environment2D = env
@@ -86,16 +95,39 @@ class Ray2D:
 
             # Check backwards propagation (if not allowed): TODO
 
-            # Check reflections
-            # floor
-            # ceiling
+
+            # Check reflections > NOTE: intersections are calculated with a fineness of dx (no complex segment intersection algorithm followed by a solver)
+            if self.__env.floor and z_new < self.__env.floor(x_new): # New point lands outside of range
+                x_new = float( self.func_solve(
+                        lambda x1: self.__env.floor(x) - dx_z * (x1 - x) - z,
+                        x0=x
+                ))
+                z_new = self.__env.floor(x_new)
+
+                k = np.array([1., dx_z])  # Direction of incident ray
+                u = np.array([1., self.__env.dx_floor(x_new)])  # Direction of floor
+                n = np.array([-1*u[1], u[0]])  # Normal of floor, going up
+                l = np.dot(k, u)*u - np.dot(k, n)*n  # Direction of reflected ray
+                dx_z = np.dot(l, np.array([0, 1])) / np.dot(l, np.array([1, 0]))
+            elif self.__env.ceil and z_new > self.__env.ceil(x_new):
+                x_new = float( self.func_solve(
+                        lambda x1: self.__env.ceil(x) - dx_z * (x1 - x) - z,
+                        x0=x
+                ))
+                z_new = self.__env.ceil(x_new)
+
+                k = np.array([1., dx_z])  # Direction of incident ray
+                u = np.array([1., self.__env.dx_ceil(x_new)])  # Direction of floor
+                n = np.array([u[1], -1*u[0]])  # Normal of floor, going down
+                l = np.dot(k, u)*u - np.dot(k, n)*n  # Direction of reflected ray
+                dx_z = np.dot(l, np.array([0, 1])) / np.dot(l, np.array([1, 0]))
 
             # Check simulation bounds (!!!! USE NEW X, Z AFTER REFLECTION EVENT)
-            if x_new < self.__env.range_min.x or x_new >= self.__env.range_max.x:
+            if x_new < self.__env.range_min.x or x_new > self.__env.range_max.x:
                 # TODO: plot last point at x = xmax or z = zmax
                 print('DEBUG: out of bounds (x-axis)')
                 break
-            if z_new < self.__env.range_min.z or z_new >= self.__env.range_max.z:
+            if z_new < self.__env.range_min.z or z_new > self.__env.range_max.z:
                 # TODO: plot last point at x = xmax or z = zmax
                 print('DEBUG: out of bounds (z-axis)')
                 break
@@ -110,7 +142,7 @@ class Ray2D:
             # Calculate new point's properties
             c = calc_c (z_new)
             dz_c = calc_dz_c (z_new)
-            # Update derivatives
+            # Update derivatives for next integration segment
             dxdx_z = mult * dz_c / np.power(c, 3)
             dx_z += dxdx_z * dx
 
