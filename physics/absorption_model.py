@@ -3,7 +3,7 @@
 
 import numpy as np
 
-
+# Sound absorption in seawater
 def calc_absorption_dB (f: float, z: float, T: float, S: float, pH: float):
     """
     Ainslie and McColm 1998
