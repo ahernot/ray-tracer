@@ -91,8 +91,7 @@ class Ray2D:
 
             # print(f'DEBUG: {x}, {z} => {x_new}, {z_new}')
 
-
-
+            # TODO: work witk the k vector only
             # Check backwards propagation (if not allowed): TODO
 
             
@@ -103,7 +102,6 @@ class Ray2D:
                 u = np.array([1., self.__env.dx_floor(x_new)])  # Direction of floor
                 n = np.array([-1*u[1], u[0]])  # Normal of floor, going up
                 l = np.dot(k, u)*u - np.dot(k, n)*n  # Direction of reflected ray
-                print(k, u, n, l)
                 if l[0] < 0:
                     print('backwards')
                     break
