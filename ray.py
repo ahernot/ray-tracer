@@ -49,6 +49,7 @@ class Ray2D:
         self.__env: Environment2D = env
         self.__angle_init = angle
         self.__is_propagated = False
+        self.stop_reason = None
 
         # Initialise
         self.XZ = np.expand_dims(self.__source.copy(), axis=0)
@@ -124,8 +125,9 @@ class Ray2D:
                 k = np.dot(k, u)*u - np.dot(k, n)*n  # Direction of reflected ray
                 self.n_rebounds += 1
                 if self.n_rebounds_max > -1 and self.n_rebounds > self.n_rebounds_max:
-                    if verbose: print(f'DEBUG: Max number of rebounds reached ({self.n_rebounds_max})')
                     self.XZ = np.insert(self.XZ, i+1, P, axis=0)  # Add final point
+                    if verbose: print(f'DEBUG: Max number of rebounds reached ({self.n_rebounds_max})')
+                    self.stop_reason = 'max-rebounds'
                     break
                 if verbose: print(f'DEBUG: #{self.n_rebounds} - Floor rebound. New dir: {k}')
 
@@ -139,8 +141,9 @@ class Ray2D:
                 k = np.dot(k, u)*u - np.dot(k, n)*n  # Direction of reflected ray
                 self.n_rebounds += 1
                 if self.n_rebounds_max > -1 and self.n_rebounds > self.n_rebounds_max:
-                    if verbose: print(f'DEBUG: Max number of rebounds reached ({self.n_rebounds_max})')
                     self.XZ = np.insert(self.XZ, i+1, P, axis=0)  # Add final point
+                    if verbose: print(f'DEBUG: Max number of rebounds reached ({self.n_rebounds_max})')
+                    self.stop_reason = 'max-rebounds'
                     break
                 if verbose: print(f'DEBUG: #{self.n_rebounds} - Ceiling rebound. New dir: {k}')
             
@@ -153,24 +156,28 @@ class Ray2D:
                 z_new = -1 * dx_z * (x_new - x) + z  # Only hit when going left (x_dir = -1)
                 self.XZ = np.insert(self.XZ, i+1, np.array([x_new, z_new]), axis=0)  # Add final point
                 if verbose: print('DEBUG: Out of bounds (x-axis min)')
+                self.stop_reason = 'exit-xmin'
                 break 
             elif x_new > self.__env.range_max[0]:
                 x_new = self.__env.range_max[0]
                 z_new = dx_z * (x_new - x) + z  # Only hit when going right (x_dir = 1)
                 self.XZ = np.insert(self.XZ, i+1, np.array([x_new, z_new]), axis=0)  # Add final point
                 if verbose: print('DEBUG: Out of bounds (x-axis max)')
+                self.stop_reason = 'exit-xmax'
                 break
             elif z_new < self.__env.range_min[1]:
                 z_new = self.__env.range_min[1]
                 x_new = x_dir * (z_new - z) / dx_z + x
                 self.XZ = np.insert(self.XZ, i+1, np.array([x_new, z_new]), axis=0)  # Add final point
                 if verbose: print('DEBUG: Out of bounds (z-axis min)')
+                self.stop_reason = 'exit-zmin'
                 break
             elif z_new > self.__env.range_max[1]:
                 z_new = self.__env.range_max[1]
                 x_new = x_dir * (z_new - z) / dx_z + x
                 self.XZ = np.insert(self.XZ, i+1, np.array([x_new, z_new]), axis=0)  # Add final point
                 if verbose: print('DEBUG: Out of bounds (z-axis max)')
+                self.stop_reason = 'exit-zmax'
                 break
             
             
@@ -191,10 +198,12 @@ class Ray2D:
             # Check backpropagation
             if not self.backprop and x_dir < 0:
                 if verbose: print('DEBUG: Backpropagation')
+                self.stop_reason = 'backprop'
                 break
             
             # Check number of steps (verbose only)
             if verbose and i == self.n_steps_max - 1:
+                self.stop_reason = 'max-iter'
                 print(f'DEBUG: Maximum iterations reached ({self.n_steps_max})')
 
         # Generate interpolated path function
