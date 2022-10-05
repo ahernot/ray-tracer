@@ -103,10 +103,10 @@ class Ray2D:
                 k = np.dot(k, u)*u - np.dot(k, n)*n  # Direction of reflected ray
                 self.n_rebounds += 1
                 if self.n_rebounds_max > -1 and self.n_rebounds > self.n_rebounds_max:
-                    if verbose: print('DEBUG: Max number of rebounds reached')
+                    if verbose: print(f'DEBUG: Max number of rebounds reached ({self.n_rebounds_max})')
                     self.XZ = np.insert(self.XZ, i+1, P, axis=0)  # Add final point
                     break
-                if verbose: print(f'DEBUG: Ground rebound. New dir: {k}')
+                if verbose: print(f'DEBUG: #{self.n_rebounds} - Ground rebound. New dir: {k}')
         
             elif self.__env.ceil and z_new > self.__env.ceil(x_new):
                 x_new = float( self.func_solve( lambda x1: self.__env.ceil(x) - dx_z * (x1 - x) - z, x0=x ))
@@ -117,10 +117,10 @@ class Ray2D:
                 k = np.dot(k, u)*u - np.dot(k, n)*n  # Direction of reflected ray
                 self.n_rebounds += 1
                 if self.n_rebounds_max > -1 and self.n_rebounds > self.n_rebounds_max:
-                    if verbose: print('DEBUG: Max number of rebounds reached')
+                    if verbose: print(f'DEBUG: Max number of rebounds reached ({self.n_rebounds_max})')
                     self.XZ = np.insert(self.XZ, i+1, P, axis=0)  # Add final point
                     break
-                if verbose: print(f'DEBUG: Surface rebound. New dir: {k}')
+                if verbose: print(f'DEBUG: #{self.n_rebounds} - Surface rebound. New dir: {k}')
             
             else:
                 P = np.array([x_new, z_new])
@@ -170,7 +170,7 @@ class Ray2D:
                 break
 
             if i == self.n_steps_max - 1:
-                if verbose: print('DEBUG: Maximum iterations reached')
+                if verbose: print(f'DEBUG: Maximum iterations reached ({self.n_steps_max})')
 
         # # Generate interpolated path function
         # self.Z_func = interpolate.interp1d(self.X, self.Z, kind='linear')
