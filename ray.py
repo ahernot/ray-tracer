@@ -18,7 +18,7 @@ from physics.reflection import reflection_coefficient
 from environment import Environment2D
 
 
-DX_MAX_DEFAULT = 1.0  # 0.1
+DX_MAX_DEFAULT = 10.
 DZ_MAX_DEFAULT = 0.1
 N_STEPS_MAX = 100000
 N_REBOUNDS_MAX = -1  # -1=infinity
