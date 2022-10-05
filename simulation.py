@@ -16,13 +16,13 @@ class Simulation2D:
     def __repr__ (self):
         return f'2D simulation containing {self.n_rays} rays'  # TODO: to improve later
 
-    def add_rays (self, *angles):
+    def add_rays (self, source, *angles, **kwargs):
         # Supports two rays for the same angle (for example two different frequencies)
 
         for angle in angles:
             # Generate ray
-            ray = Ray2D (env=self.__env, angle=angle)  # more params
-            ray.propagate()  # feed propagation params for the simulation
+            ray = Ray2D (self.__env, source, angle)
+            ray.propagate(**kwargs)
 
             # Add ray to simulation
             self.__rays .append(ray)
@@ -30,6 +30,9 @@ class Simulation2D:
         
         self.n_rays = len(self.__rays)
         self.n_angles = len(self.__angles)
+
+    def get_rays (self):
+        return self.__rays
 
     def plot (self):
         # Plot environment (floor & ceiling for now)
