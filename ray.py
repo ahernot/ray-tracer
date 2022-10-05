@@ -55,8 +55,7 @@ class Ray2D:
         self.dx_z_max = np.abs(self.dz_max / self.dx_max)  # Decision slope between both min resolutions
 
         # Initialise
-        self.X = np.array([self.__source[0], ])
-        self.Z = np.array([self.__source[1], ])
+        self.XZ = np.expand_dims(self.__source.copy(), axis=0)
 
 
     def __repr__ (self):
@@ -90,51 +89,43 @@ class Ray2D:
 
             # print(f'DEBUG: {x}, {z} => {x_new}, {z_new}')
             
-            if self.__env.floor and z_new < self.__env.floor(x_new):
+            if self.__env.floor and z_new < self.__env.floor(x_new):  # Calculate intersection point and new direction vector
                 x_new = float( self.func_solve( lambda x1: self.__env.floor(x) - dx_z * (x1 - x) - z, x0=x ))
                 z_new = self.__env.floor(x_new)
                 u = np.array([1., self.__env.dx_floor(x_new)])  # Direction of floor
                 n = np.array([-1*u[1], u[0]])  # Normal of floor, going up
-                l = np.dot(k, u)*u - np.dot(k, n)*n  # Direction of reflected ray
-                if l[0] < 0:
-                    print('backwards')
-                    # x_dir *= -1
-                    break
-                dx_z = l[1] / l[0]
-                print(f'DEBUG: Ground rebound. New dir: {dx_z}')
+                k = np.dot(k, u)*u - np.dot(k, n)*n  # Direction of reflected ray
+                print(f'DEBUG: Ground rebound. New dir: {k}')
         
-            if self.__env.ceil and z_new > self.__env.ceil(x_new):
+            elif self.__env.ceil and z_new > self.__env.ceil(x_new):
                 x_new = float( self.func_solve( lambda x1: self.__env.ceil(x) - dx_z * (x1 - x) - z, x0=x ))
                 z_new = self.__env.ceil(x_new)
                 u = np.array([1., self.__env.dx_ceil(x_new)])  # Direction of floor
                 n = np.array([u[1], -1*u[0]])  # Normal of floor, going down
-                l = np.dot(k, u)*u - np.dot(k, n)*n  # Direction of reflected ray
-                if l[0] < 0:
-                    print('backwards')
-                    # x_dir *= -1
-                    break
-                dx_z = l[1] / l[0]
-                print(f'DEBUG: Surface rebound. New dir: {dx_z}')
+                k = np.dot(k, u)*u - np.dot(k, n)*n  # Direction of reflected ray
+                print(f'DEBUG: Surface rebound. New dir: {k}')
 
-            # Check simulation bounds (!!!! USE NEW X, Z AFTER REFLECTION EVENT)
+            # Check simulation bounds
             if x_new < self.__env.range_min.x or x_new > self.__env.range_max.x:
-                # TODO: plot last point at x = xmax or z = zmax
+                # TODO: plot last point at x = xmax
                 print('DEBUG: out of bounds (x-axis)')
                 break
             if z_new < self.__env.range_min.z or z_new > self.__env.range_max.z:
-                # TODO: plot last point at x = xmax or z = zmax
+                # TODO: plot last point at z = zmax
                 print('DEBUG: out of bounds (z-axis)')
                 break
-
-
+            
+            
             # Add new point
-            self.X = np.concatenate((self.X, np.array([x_new, ])), axis=0)
-            self.Z = np.concatenate((self.Z, np.array([z_new, ])), axis=0)
             P = np.array([x_new, z_new])
+            self.XZ = np.insert(self.XZ, i+1, P, axis=0)
             # Calculate new point's properties
             c = calc_c (z_new)
             dz_c = calc_dz_c (z_new)
-            # Update derivatives for next integration segment
+            # Unpack k
+            x_dir = np.sign(k[0])
+            dx_z = k[1] / k[0]
+            # Update k for next integration segment
             dxdx_z = mult * dz_c / np.power(c, 3)
             dx_z += dxdx_z * k[0]
             k = np.array([x_dir, dx_z])
@@ -143,6 +134,7 @@ class Ray2D:
             if i == self.n_steps_max - 1:
                 print('MAX ITER')
 
+        print(self.XZ.shape)
         # # Generate interpolated path function
         # self.Z_func = interpolate.interp1d(self.X, self.Z, kind='linear')
 
