@@ -30,7 +30,7 @@ N_REBOUNDS_MAX = -1  # -1=infinity
 class Ray2D:
     # Only one child ray per reflection: highest intensity specular reflection only
 
-    def __init__ (self, env: Environment2D, source: Point2D, angle, **kwargs):
+    def __init__ (self, env: Environment2D, source: np.ndarray, angle, **kwargs):
         """
         :param env: Simulation environment
         :param source: Source point
@@ -41,7 +41,7 @@ class Ray2D:
         self.calc_der = kwargs.get('calc_der', derivative)
         self.func_solve = kwargs.get('func_solve', fsolve)
 
-        self.__source: Point2D = source
+        self.__source: np.ndarray = source
         self.__env: Environment2D = env
         self.__angle_init = angle
         self.__is_propagated = False
@@ -52,11 +52,11 @@ class Ray2D:
         # Minimum resolutions
         self.dx_max = kwargs.get('dx_max', DX_MAX_DEFAULT)
         self.dz_max = kwargs.get('dz_max', DZ_MAX_DEFAULT)
-        self.dx_z_max = np.abs(self.dz_max / self.dx_max)
+        self.dx_z_max = np.abs(self.dz_max / self.dx_max)  # Decision slope between both min resolutions
 
         # Initialise
-        self.X = np.array([self.__source.x, ])
-        self.Z = np.array([self.__source.z, ])
+        self.X = np.array([self.__source[0], ])
+        self.Z = np.array([self.__source[1], ])
 
 
     def __repr__ (self):
@@ -66,10 +66,12 @@ class Ray2D:
         if self.__is_propagated: return
 
         # Initialise
+        P = self.__source
         angle = -1 * self.__angle_init + (np.pi / 2)  # convert angle notation
-        x, z = self.__source.coordinates()
         dx_z = 1 / np.tan(angle)
         dxdx_z = 0  # no initial curvature
+        x_dir = 1.  # forwards propagation
+        k = np.array([x_dir, dx_z])
         # Initialise solver
         c0 = calc_c(0)
         mult = -1 * np.power(c0 / np.sin(angle), 2)  # differential equation multiplier
@@ -78,33 +80,25 @@ class Ray2D:
 
         for i in range(self.n_steps_max):
 
-            # Calculate new integration segment with angle from previous step
-            if np.abs(dx_z) > self.dx_z_max:  # steeper slope => limit dz=dz_max
-                dz = np.sign(dx_z) * self.dz_max
-                dx = dz / dx_z
-            else:  # smaller slope => limit dx=dx_max
-                dx = self.dx_max
-                dz = dx_z * dx
-            # Calculate new point (before reflections)
-            x_new = x + dx
-            z_new = z + dz
+            # Enforce minimum resolution (k becomes this step's [dx, dz])
+            if abs(dx_z) > self.dx_z_max: k *= self.dz_max / abs(dx_z)
+            else: k *= self.dx_max
+
+            # Unpack coordinates
+            x, z = P
+            x_new, z_new = P + k
 
             # print(f'DEBUG: {x}, {z} => {x_new}, {z_new}')
-
-            # TODO: work witk the k vector only
-            # Check backwards propagation (if not allowed): TODO
-            # Just do backwards the same as forwards, but mirrored: split up the rays
-
             
             if self.__env.floor and z_new < self.__env.floor(x_new):
                 x_new = float( self.func_solve( lambda x1: self.__env.floor(x) - dx_z * (x1 - x) - z, x0=x ))
                 z_new = self.__env.floor(x_new)
-                k = np.array([1., dx_z])  # Direction of incident ray
                 u = np.array([1., self.__env.dx_floor(x_new)])  # Direction of floor
                 n = np.array([-1*u[1], u[0]])  # Normal of floor, going up
                 l = np.dot(k, u)*u - np.dot(k, n)*n  # Direction of reflected ray
                 if l[0] < 0:
                     print('backwards')
+                    # x_dir *= -1
                     break
                 dx_z = l[1] / l[0]
                 print(f'DEBUG: Ground rebound. New dir: {dx_z}')
@@ -112,12 +106,12 @@ class Ray2D:
             if self.__env.ceil and z_new > self.__env.ceil(x_new):
                 x_new = float( self.func_solve( lambda x1: self.__env.ceil(x) - dx_z * (x1 - x) - z, x0=x ))
                 z_new = self.__env.ceil(x_new)
-                k = np.array([1., dx_z])  # Direction of incident ray
                 u = np.array([1., self.__env.dx_ceil(x_new)])  # Direction of floor
                 n = np.array([u[1], -1*u[0]])  # Normal of floor, going down
                 l = np.dot(k, u)*u - np.dot(k, n)*n  # Direction of reflected ray
                 if l[0] < 0:
                     print('backwards')
+                    # x_dir *= -1
                     break
                 dx_z = l[1] / l[0]
                 print(f'DEBUG: Surface rebound. New dir: {dx_z}')
@@ -132,19 +126,18 @@ class Ray2D:
                 print('DEBUG: out of bounds (z-axis)')
                 break
 
-        
 
             # Add new point
             self.X = np.concatenate((self.X, np.array([x_new, ])), axis=0)
             self.Z = np.concatenate((self.Z, np.array([z_new, ])), axis=0)
-            x = x_new
-            z = z_new
+            P = np.array([x_new, z_new])
             # Calculate new point's properties
             c = calc_c (z_new)
             dz_c = calc_dz_c (z_new)
             # Update derivatives for next integration segment
             dxdx_z = mult * dz_c / np.power(c, 3)
-            dx_z += dxdx_z * dx
+            dx_z += dxdx_z * k[0]
+            k = np.array([x_dir, dx_z])
 
 
             if i == self.n_steps_max - 1:
