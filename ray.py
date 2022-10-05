@@ -93,6 +93,7 @@ class Ray2D:
 
             # TODO: work witk the k vector only
             # Check backwards propagation (if not allowed): TODO
+            # Just do backwards the same as forwards, but mirrored: split up the rays
 
             
             if self.__env.floor and z_new < self.__env.floor(x_new):
