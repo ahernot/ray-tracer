@@ -61,7 +61,9 @@ class Ray2D:
     def __repr__ (self):
         return f'Ray object'  # TODO: improve repr
 
-    def propagate (self, calc_c=calc_c, calc_dz_c=calc_dz_c):
+    def propagate (self, calc_c=calc_c, calc_dz_c=calc_dz_c, **kwargs):
+        verbose = kwargs.get('verbose', False)
+        backprop = kwargs.get('backprop', True)
         if self.__is_propagated: return
 
         # Initialise
@@ -95,7 +97,7 @@ class Ray2D:
                 u = np.array([1., self.__env.dx_floor(x_new)])  # Direction of floor
                 n = np.array([-1*u[1], u[0]])  # Normal of floor, going up
                 k = np.dot(k, u)*u - np.dot(k, n)*n  # Direction of reflected ray
-                print(f'DEBUG: Ground rebound. New dir: {k}')
+                if verbose: print(f'DEBUG: Ground rebound. New dir: {k}')
         
             elif self.__env.ceil and z_new > self.__env.ceil(x_new):
                 x_new = float( self.func_solve( lambda x1: self.__env.ceil(x) - dx_z * (x1 - x) - z, x0=x ))
@@ -103,32 +105,32 @@ class Ray2D:
                 u = np.array([1., self.__env.dx_ceil(x_new)])  # Direction of floor
                 n = np.array([u[1], -1*u[0]])  # Normal of floor, going down
                 k = np.dot(k, u)*u - np.dot(k, n)*n  # Direction of reflected ray
-                print(f'DEBUG: Surface rebound. New dir: {k}')
+                if verbose: print(f'DEBUG: Surface rebound. New dir: {k}')
 
             # Check simulation bounds
             if x_new < self.__env.range_min.x:
                 x_new = self.__env.range_min.x
                 z_new = -1 * dx_z * (x_new - x) + z  # Only hit when going left (x_dir = -1)
                 self.XZ = np.insert(self.XZ, i+1, np.array([x_new, z_new]), axis=0)
-                print('DEBUG: out of bounds (x-axis min)')
+                if verbose: print('DEBUG: Out of bounds (x-axis min)')
                 break 
             elif x_new > self.__env.range_max.x:
                 x_new = self.__env.range_min.x
                 z_new = dx_z * (x_new - x) + z  # Only hit when going right (x_dir = 1)
                 self.XZ = np.insert(self.XZ, i+1, np.array([x_new, z_new]), axis=0)
-                print('DEBUG: out of bounds (x-axis max)')
+                if verbose: print('DEBUG: Out of bounds (x-axis max)')
                 break
             elif z_new < self.__env.range_min.z:
                 z_new = self.__env.range_min.z
                 x_new = x_dir * (z_new - z) / dx_z + x
                 self.XZ = np.insert(self.XZ, i+1, np.array([x_new, z_new]), axis=0)
-                print('DEBUG: out of bounds (z-axis min)')
+                if verbose: print('DEBUG: Out of bounds (z-axis min)')
                 break
             elif z_new > self.__env.range_max.z:
                 z_new = self.__env.range_max.z
                 x_new = x_dir * (z_new - z) / dx_z + x
                 self.XZ = np.insert(self.XZ, i+1, np.array([x_new, z_new]), axis=0)
-                print('DEBUG: out of bounds (z-axis max)')
+                if verbose: print('DEBUG: Out of bounds (z-axis max)')
                 break
             
             
@@ -146,9 +148,12 @@ class Ray2D:
             dx_z += dxdx_z * k[0]
             k = np.array([x_dir, dx_z])
 
+            if not backprop and x_dir < 0:
+                if verbose: print('DEBUG: Backpropagation')
+                break
 
             if i == self.n_steps_max - 1:
-                print('MAX ITER')
+                if verbose: print('DEBUG: Maximum iterations reached')
 
         # # Generate interpolated path function
         # self.Z_func = interpolate.interp1d(self.X, self.Z, kind='linear')
