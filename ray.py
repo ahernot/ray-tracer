@@ -7,6 +7,7 @@ from scipy import interpolate
 from scipy.optimize import fsolve
 from scipy.misc import derivative
 
+from preferences import *
 import physics
 # from physics.absorption_model import calc_absorption_dB
 from physics.profile_velocity import calc_c, calc_dz_c
@@ -18,14 +19,13 @@ from physics.profile_velocity import calc_c, calc_dz_c
 from environment import Environment2D
 
 
-DX_MAX_DEFAULT = 10.
-DZ_MAX_DEFAULT = 0.1
-N_STEPS_MAX = 100000
-N_REBOUNDS_MAX = -1  # -1=infinity
+
 
 
 # TODO New version: each ray is subdivided into segments and with each rebound new subclasses are created as a tree (can have multiple branches per rebound)
 # TODO: generalise as calc_c(x, z) and derive using numpy => use matrices for calculations (set resolution) / use 2D functions for calculations
+
+# TODO: Add min and max values into self. for when using interpolated function, generated at the same time as the latter
 
 class Ray2D:
 
@@ -179,6 +179,6 @@ class Ray2D:
                 print(f'DEBUG: Maximum iterations reached ({self.n_steps_max})')
 
         # Generate interpolated path function
-        self.Z_func = interpolate.interp1d(self.XZ[:, 0], self.XZ[:, 1], kind='linear')
+        self.calc_z = interpolate.interp1d(self.XZ[:, 0], self.XZ[:, 1], kind='linear')
         
         self.__is_propagated = True
