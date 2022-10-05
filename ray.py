@@ -1,6 +1,12 @@
 # 2D Ray Propagation Model (v3.0)
 # Copyright Anatole Hernot (Mines Paris), 2022. All rights reserved.
 
+# TODO New version: each ray is subdivided into segments and with each rebound new subclasses are created as a tree (can have multiple branches per rebound)
+# TODO: generalise as calc_c(x, z) and derive using numpy => use matrices for calculations (set resolution) / use 2D functions for calculations
+# TODO: Add min and max values into self. for when using interpolated function, generated at the same time as the latter
+
+
+
 import numpy as np
 
 from scipy import interpolate
@@ -9,8 +15,8 @@ from scipy.misc import derivative
 
 from preferences import *
 import physics
-# from physics.absorption_model import calc_absorption_dB
 from physics.profile_velocity import calc_c, calc_dz_c
+# from physics.absorption_model import calc_absorption_dB
 # from physics.profile_salinity import calc_S
 # from physics.profile_temperature import calc_T
 # from physics.profile_ph import calc_pH
@@ -19,13 +25,6 @@ from physics.profile_velocity import calc_c, calc_dz_c
 from environment import Environment2D
 
 
-
-
-
-# TODO New version: each ray is subdivided into segments and with each rebound new subclasses are created as a tree (can have multiple branches per rebound)
-# TODO: generalise as calc_c(x, z) and derive using numpy => use matrices for calculations (set resolution) / use 2D functions for calculations
-
-# TODO: Add min and max values into self. for when using interpolated function, generated at the same time as the latter
 
 class Ray2D:
 
