@@ -1,8 +1,6 @@
 import numpy as np
 from scipy import interpolate
 
-from geometry import Point2D, Vector2D
-
 
 class Environment2D:
 
@@ -14,15 +12,15 @@ class Environment2D:
         # TODO: Use discrete matrices instead (set resolution) for x,t derivation and time-moving limits (floor, …)
 
         #self.range = {'x': (0, 100000), 'z': (-10000, 10000)}
-        self.range_min = Vector2D (0, -5500)
-        self.range_max = Vector2D (100000, 0)
+        self.range_min = np.array([0, -5500])
+        self.range_max = np.array([100000, 0])
 
         self.floor = floor
         self.ceil = ceiling
 
         res = 10000
-        mult = res / self.range_max.x
-        x = np.linspace(self.range_min.x, self.range_max.x, res)
+        mult = res / self.range_max[0]
+        x = np.linspace(self.range_min[0], self.range_max[0], res)
         self.dx_floor = interpolate.interp1d(x, np.gradient(self.floor(x)) * mult, kind='quadratic')  # floor is static
         self.dx_ceil = interpolate.interp1d(x, np.gradient(self.ceil(x)) * mult, kind='quadratic')  # ceiling is static
 

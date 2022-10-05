@@ -1,4 +1,3 @@
-from geometry import Point2D
 from environment import Environment2D
 from ray import Ray2D
 

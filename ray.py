@@ -3,17 +3,18 @@
 
 import numpy as np
 
-from scipy import interpolate  # TODO
+from scipy import interpolate
 from scipy.optimize import fsolve
-from scipy.misc import derivative  # TODO
+from scipy.misc import derivative
 
-from physics.absorption_model import calc_absorption_dB
+import physics
+# from physics.absorption_model import calc_absorption_dB
 from physics.profile_velocity import calc_c, calc_dz_c
-from physics.profile_salinity import calc_S
-from physics.profile_temperature import calc_T
-from physics.profile_ph import calc_pH
-from physics.surface_reflection_model import calc_refcoef_surface
-from physics.reflection import reflection_coefficient
+# from physics.profile_salinity import calc_S
+# from physics.profile_temperature import calc_T
+# from physics.profile_ph import calc_pH
+# from physics.surface_reflection_model import calc_refcoef_surface
+# from physics.reflection import reflection_coefficient
 from environment import Environment2D
 
 
@@ -63,8 +64,8 @@ class Ray2D:
         self.n_rebounds = 0
 
         # Ray speed functions (x-invariant)
-        calc_c = kwargs.get('calc_c', calc_c)  # Ray speed function (x-invariant)
-        calc_dz_c = kwargs.get('calc_dz_c', calc_dz_c)  # Ray speed z-derivative function (x-invariant)
+        calc_c = kwargs.get('calc_c', physics.profile_velocity.calc_c)  # Ray speed function (x-invariant)
+        calc_dz_c = kwargs.get('calc_dz_c', physics.profile_velocity.calc_dz_c)  # Ray speed z-derivative function (x-invariant)
 
         # Minimum resolutions
         self.dx_max = kwargs.get('dx_max', DX_MAX_DEFAULT)
@@ -128,26 +129,26 @@ class Ray2D:
                 P = np.array([x_new, z_new])
 
             # Check simulation bounds
-            if x_new < self.__env.range_min.x:
-                x_new = self.__env.range_min.x
+            if x_new < self.__env.range_min[0]:
+                x_new = self.__env.range_min[0]
                 z_new = -1 * dx_z * (x_new - x) + z  # Only hit when going left (x_dir = -1)
                 self.XZ = np.insert(self.XZ, i+1, np.array([x_new, z_new]), axis=0)  # Add final point
                 if verbose: print('DEBUG: Out of bounds (x-axis min)')
                 break 
-            elif x_new > self.__env.range_max.x:
-                x_new = self.__env.range_min.x
+            elif x_new > self.__env.range_max[0]:
+                x_new = self.__env.range_min[0]
                 z_new = dx_z * (x_new - x) + z  # Only hit when going right (x_dir = 1)
                 self.XZ = np.insert(self.XZ, i+1, np.array([x_new, z_new]), axis=0)  # Add final point
                 if verbose: print('DEBUG: Out of bounds (x-axis max)')
                 break
-            elif z_new < self.__env.range_min.z:
-                z_new = self.__env.range_min.z
+            elif z_new < self.__env.range_min[1]:
+                z_new = self.__env.range_min[1]
                 x_new = x_dir * (z_new - z) / dx_z + x
                 self.XZ = np.insert(self.XZ, i+1, np.array([x_new, z_new]), axis=0)  # Add final point
                 if verbose: print('DEBUG: Out of bounds (z-axis min)')
                 break
-            elif z_new > self.__env.range_max.z:
-                z_new = self.__env.range_max.z
+            elif z_new > self.__env.range_max[1]:
+                z_new = self.__env.range_max[1]
                 x_new = x_dir * (z_new - z) / dx_z + x
                 self.XZ = np.insert(self.XZ, i+1, np.array([x_new, z_new]), axis=0)  # Add final point
                 if verbose: print('DEBUG: Out of bounds (z-axis max)')
@@ -178,6 +179,6 @@ class Ray2D:
                 print(f'DEBUG: Maximum iterations reached ({self.n_steps_max})')
 
         # Generate interpolated path function
-        self.Z_func = interpolate.interp1d(self.XZ[:, 0], self.Z[:, 1], kind='linear')
+        self.Z_func = interpolate.interp1d(self.XZ[:, 0], self.XZ[:, 1], kind='linear')
         
         self.__is_propagated = True
