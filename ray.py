@@ -30,9 +30,15 @@ class Ray2D:
 
     def __init__ (self, env: Environment2D, source: np.ndarray, angle, **kwargs):
         """
+        Initialise ray
+        
         :param env: Simulation environment
         :param source: Source point
         :param angle: Casting angle (from horizontal), in radians
+
+        kwargs
+        :param calc_der: Derivative calculation function
+        :param func_solve: Equation solver
         """
 
         # Solver functions
@@ -52,6 +58,20 @@ class Ray2D:
         return f'Ray object'  # TODO: improve repr
 
     def propagate (self, **kwargs):
+        """
+        Propagate ray
+
+        kwargs
+        :param backprop: Allow backpropagation (default=True)
+        :param calc_c:
+        :param calc_dz_c:
+        :param dx_max:
+        :param dz_max:
+        :param n_steps_max:
+        :param n_rebounds_max:
+        :param verbose: Verbose (default=False)
+        """
+
         verbose = kwargs.get('verbose', False)
         if self.__is_propagated:
             if verbose: print('ERROR: Ray already propagated')
