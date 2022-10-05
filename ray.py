@@ -51,7 +51,7 @@ class Ray2D:
     def __repr__ (self):
         return f'Ray object'  # TODO: improve repr
 
-    def propagate (self, calc_c=calc_c, calc_dz_c=calc_dz_c, **kwargs):
+    def propagate (self, **kwargs):
         verbose = kwargs.get('verbose', False)
         if self.__is_propagated:
             if verbose: print('ERROR: Ray already propagated')
@@ -62,11 +62,14 @@ class Ray2D:
         self.n_rebounds_max = kwargs.get('n_rebounds_max', N_REBOUNDS_MAX)
         self.n_rebounds = 0
 
+        # Ray speed functions (x-invariant)
+        calc_c = kwargs.get('calc_c', calc_c)  # Ray speed function (x-invariant)
+        calc_dz_c = kwargs.get('calc_dz_c', calc_dz_c)  # Ray speed z-derivative function (x-invariant)
+
         # Minimum resolutions
         self.dx_max = kwargs.get('dx_max', DX_MAX_DEFAULT)
         self.dz_max = kwargs.get('dz_max', DZ_MAX_DEFAULT)
         dx_z_max = np.abs(self.dz_max / self.dx_max)  # Decision slope between both min resolutions
-
 
 
         # Initialise
@@ -81,7 +84,6 @@ class Ray2D:
         mult = -1 * np.power(c0 / np.sin(angle), 2)  # differential equation multiplier
 
 
-
         for i in range(self.n_steps_max):
 
             # Enforce minimum resolution (k becomes this step's [dx, dz])
@@ -92,8 +94,7 @@ class Ray2D:
             x, z = P
             x_new, z_new = P + k
 
-            # print(f'DEBUG: {x}, {z} => {x_new}, {z_new}')
-            
+            # Check floor rebounds
             if self.__env.floor and z_new < self.__env.floor(x_new):  # Calculate intersection point and new direction vector
                 x_new = float( self.func_solve( lambda x1: self.__env.floor(x) - dx_z * (x1 - x) - z, x0=x ))
                 z_new = self.__env.floor(x_new)
@@ -106,8 +107,9 @@ class Ray2D:
                     if verbose: print(f'DEBUG: Max number of rebounds reached ({self.n_rebounds_max})')
                     self.XZ = np.insert(self.XZ, i+1, P, axis=0)  # Add final point
                     break
-                if verbose: print(f'DEBUG: #{self.n_rebounds} - Ground rebound. New dir: {k}')
-        
+                if verbose: print(f'DEBUG: #{self.n_rebounds} - Floor rebound. New dir: {k}')
+
+            # Check ceiling rebounds
             elif self.__env.ceil and z_new > self.__env.ceil(x_new):
                 x_new = float( self.func_solve( lambda x1: self.__env.ceil(x) - dx_z * (x1 - x) - z, x0=x ))
                 z_new = self.__env.ceil(x_new)
@@ -120,7 +122,7 @@ class Ray2D:
                     if verbose: print(f'DEBUG: Max number of rebounds reached ({self.n_rebounds_max})')
                     self.XZ = np.insert(self.XZ, i+1, P, axis=0)  # Add final point
                     break
-                if verbose: print(f'DEBUG: #{self.n_rebounds} - Surface rebound. New dir: {k}')
+                if verbose: print(f'DEBUG: #{self.n_rebounds} - Ceiling rebound. New dir: {k}')
             
             else:
                 P = np.array([x_new, z_new])
@@ -165,14 +167,17 @@ class Ray2D:
             dx_z += dxdx_z * k[0]
             k = np.array([x_dir, dx_z])
 
+
+            # Check backpropagation
             if not self.backprop and x_dir < 0:
                 if verbose: print('DEBUG: Backpropagation')
                 break
+            
+            # Check number of steps (verbose only)
+            if verbose and i == self.n_steps_max - 1:
+                print(f'DEBUG: Maximum iterations reached ({self.n_steps_max})')
 
-            if i == self.n_steps_max - 1:
-                if verbose: print(f'DEBUG: Maximum iterations reached ({self.n_steps_max})')
-
-        # # Generate interpolated path function
-        # self.Z_func = interpolate.interp1d(self.X, self.Z, kind='linear')
-
+        # Generate interpolated path function
+        self.Z_func = interpolate.interp1d(self.XZ[:, 0], self.Z[:, 1], kind='linear')
+        
         self.__is_propagated = True
