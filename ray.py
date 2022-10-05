@@ -7,7 +7,6 @@ from scipy import interpolate  # TODO
 from scipy.optimize import fsolve
 from scipy.misc import derivative  # TODO
 
-from geometry import Point2D, Vector2D
 from physics.absorption_model import calc_absorption_dB
 from physics.profile_velocity import calc_c, calc_dz_c
 from physics.profile_salinity import calc_S
@@ -28,13 +27,12 @@ N_REBOUNDS_MAX = -1  # -1=infinity
 # TODO: generalise as calc_c(x, z) and derive using numpy => use matrices for calculations (set resolution) / use 2D functions for calculations
 
 class Ray2D:
-    # Only one child ray per reflection: highest intensity specular reflection only
 
     def __init__ (self, env: Environment2D, source: np.ndarray, angle, **kwargs):
         """
         :param env: Simulation environment
         :param source: Source point
-        :param angle: Casting angle, in radians
+        :param angle: Casting angle (from horizontal), in radians
         """
 
         # Solver functions
@@ -46,14 +44,6 @@ class Ray2D:
         self.__angle_init = angle
         self.__is_propagated = False
 
-        self.n_steps_max = kwargs.get('n_steps_max', N_STEPS_MAX)
-        self.n_rebounds_max = kwargs.get('n_rebounds_max', N_REBOUNDS_MAX)
-
-        # Minimum resolutions
-        self.dx_max = kwargs.get('dx_max', DX_MAX_DEFAULT)
-        self.dz_max = kwargs.get('dz_max', DZ_MAX_DEFAULT)
-        self.dx_z_max = np.abs(self.dz_max / self.dx_max)  # Decision slope between both min resolutions
-
         # Initialise
         self.XZ = np.expand_dims(self.__source.copy(), axis=0)
 
@@ -63,8 +53,21 @@ class Ray2D:
 
     def propagate (self, calc_c=calc_c, calc_dz_c=calc_dz_c, **kwargs):
         verbose = kwargs.get('verbose', False)
-        backprop = kwargs.get('backprop', True)
-        if self.__is_propagated: return
+        if self.__is_propagated:
+            if verbose: print('ERROR: Ray already propagated')
+            return
+        
+        self.backprop = kwargs.get('backprop', True)
+        self.n_steps_max = kwargs.get('n_steps_max', N_STEPS_MAX)
+        self.n_rebounds_max = kwargs.get('n_rebounds_max', N_REBOUNDS_MAX)
+        self.n_rebounds = 0
+
+        # Minimum resolutions
+        self.dx_max = kwargs.get('dx_max', DX_MAX_DEFAULT)
+        self.dz_max = kwargs.get('dz_max', DZ_MAX_DEFAULT)
+        dx_z_max = np.abs(self.dz_max / self.dx_max)  # Decision slope between both min resolutions
+
+
 
         # Initialise
         P = self.__source
@@ -82,7 +85,7 @@ class Ray2D:
         for i in range(self.n_steps_max):
 
             # Enforce minimum resolution (k becomes this step's [dx, dz])
-            if abs(dx_z) > self.dx_z_max: k *= self.dz_max / abs(dx_z)
+            if abs(dx_z) > dx_z_max: k *= self.dz_max / abs(dx_z)
             else: k *= self.dx_max
 
             # Unpack coordinates
@@ -94,48 +97,62 @@ class Ray2D:
             if self.__env.floor and z_new < self.__env.floor(x_new):  # Calculate intersection point and new direction vector
                 x_new = float( self.func_solve( lambda x1: self.__env.floor(x) - dx_z * (x1 - x) - z, x0=x ))
                 z_new = self.__env.floor(x_new)
+                P = np.array([x_new, z_new])
                 u = np.array([1., self.__env.dx_floor(x_new)])  # Direction of floor
                 n = np.array([-1*u[1], u[0]])  # Normal of floor, going up
                 k = np.dot(k, u)*u - np.dot(k, n)*n  # Direction of reflected ray
+                self.n_rebounds += 1
+                if self.n_rebounds_max > -1 and self.n_rebounds > self.n_rebounds_max:
+                    if verbose: print('DEBUG: Max number of rebounds reached')
+                    self.XZ = np.insert(self.XZ, i+1, P, axis=0)  # Add final point
+                    break
                 if verbose: print(f'DEBUG: Ground rebound. New dir: {k}')
         
             elif self.__env.ceil and z_new > self.__env.ceil(x_new):
                 x_new = float( self.func_solve( lambda x1: self.__env.ceil(x) - dx_z * (x1 - x) - z, x0=x ))
                 z_new = self.__env.ceil(x_new)
+                P = np.array([x_new, z_new])
                 u = np.array([1., self.__env.dx_ceil(x_new)])  # Direction of floor
                 n = np.array([u[1], -1*u[0]])  # Normal of floor, going down
                 k = np.dot(k, u)*u - np.dot(k, n)*n  # Direction of reflected ray
+                self.n_rebounds += 1
+                if self.n_rebounds_max > -1 and self.n_rebounds > self.n_rebounds_max:
+                    if verbose: print('DEBUG: Max number of rebounds reached')
+                    self.XZ = np.insert(self.XZ, i+1, P, axis=0)  # Add final point
+                    break
                 if verbose: print(f'DEBUG: Surface rebound. New dir: {k}')
+            
+            else:
+                P = np.array([x_new, z_new])
 
             # Check simulation bounds
             if x_new < self.__env.range_min.x:
                 x_new = self.__env.range_min.x
                 z_new = -1 * dx_z * (x_new - x) + z  # Only hit when going left (x_dir = -1)
-                self.XZ = np.insert(self.XZ, i+1, np.array([x_new, z_new]), axis=0)
+                self.XZ = np.insert(self.XZ, i+1, np.array([x_new, z_new]), axis=0)  # Add final point
                 if verbose: print('DEBUG: Out of bounds (x-axis min)')
                 break 
             elif x_new > self.__env.range_max.x:
                 x_new = self.__env.range_min.x
                 z_new = dx_z * (x_new - x) + z  # Only hit when going right (x_dir = 1)
-                self.XZ = np.insert(self.XZ, i+1, np.array([x_new, z_new]), axis=0)
+                self.XZ = np.insert(self.XZ, i+1, np.array([x_new, z_new]), axis=0)  # Add final point
                 if verbose: print('DEBUG: Out of bounds (x-axis max)')
                 break
             elif z_new < self.__env.range_min.z:
                 z_new = self.__env.range_min.z
                 x_new = x_dir * (z_new - z) / dx_z + x
-                self.XZ = np.insert(self.XZ, i+1, np.array([x_new, z_new]), axis=0)
+                self.XZ = np.insert(self.XZ, i+1, np.array([x_new, z_new]), axis=0)  # Add final point
                 if verbose: print('DEBUG: Out of bounds (z-axis min)')
                 break
             elif z_new > self.__env.range_max.z:
                 z_new = self.__env.range_max.z
                 x_new = x_dir * (z_new - z) / dx_z + x
-                self.XZ = np.insert(self.XZ, i+1, np.array([x_new, z_new]), axis=0)
+                self.XZ = np.insert(self.XZ, i+1, np.array([x_new, z_new]), axis=0)  # Add final point
                 if verbose: print('DEBUG: Out of bounds (z-axis max)')
                 break
             
             
             # Add new point
-            P = np.array([x_new, z_new])
             self.XZ = np.insert(self.XZ, i+1, P, axis=0)
             # Calculate new point's properties
             c = calc_c (z_new)
@@ -148,7 +165,7 @@ class Ray2D:
             dx_z += dxdx_z * k[0]
             k = np.array([x_dir, dx_z])
 
-            if not backprop and x_dir < 0:
+            if not self.backprop and x_dir < 0:
                 if verbose: print('DEBUG: Backpropagation')
                 break
 
