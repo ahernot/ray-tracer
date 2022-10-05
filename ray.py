@@ -4,7 +4,8 @@
 # TODO New version: each ray is subdivided into segments and with each rebound new subclasses are created as a tree (can have multiple branches per rebound)
 # TODO: generalise as calc_c(x, z) and derive using numpy => use matrices for calculations (set resolution) / use 2D functions for calculations
 # TODO: Add min and max values into self. for when using interpolated function, generated at the same time as the latter
-
+# TODO: increase pace when far enough away from borders
+# TODO: add a verbose_indent kwargs field to indent verbose when called from Simulation2D with verbose enabled
 
 
 import numpy as np
