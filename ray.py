@@ -7,6 +7,7 @@
 # TODO: increase pace when far enough away from borders
 # TODO: add a verbose_indent kwargs field to indent verbose when called from Simulation2D with verbose enabled
 # TODO: pregenerate lower-res functions such as calc_absorption in fixed-size arrays to approximate the values if res=low selected
+# TODO: optimise the np.insert() function to make it inplace
 
 
 import numpy as np
