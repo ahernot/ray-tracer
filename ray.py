@@ -54,6 +54,12 @@ class Ray2D:
 
         # Initialise
         self.XZ = np.expand_dims(self.__source.copy(), axis=0)
+        self.T = np.array([0.,])
+
+        self.dL = np.array([])  # one element fewer
+        # L = cumulative sum of self.dL
+        self.dA = np.array([0., ])  # Calculate at each point
+        # A = cumulative sum of self.dA
 
 
     def __repr__ (self):
@@ -114,19 +120,19 @@ class Ray2D:
 
             # Unpack coordinates
             x, z = P
-            x_new, z_new = P + k
+            x_new, z_new = P_new = P + k
 
             # Check floor rebounds
             if self.__env.floor and z_new < self.__env.floor(x_new):  # Calculate intersection point and new direction vector
                 x_new = float( self.func_solve( lambda x1: self.__env.floor(x) - dx_z * (x1 - x) - z, x0=x ))
                 z_new = self.__env.floor(x_new)
-                P = np.array([x_new, z_new])
+                P_new = np.array([x_new, z_new])
                 u = np.array([1., self.__env.dx_floor(x_new)])  # Direction of floor
                 n = np.array([-1*u[1], u[0]])  # Normal of floor, going up
                 k = np.dot(k, u)*u - np.dot(k, n)*n  # Direction of reflected ray
                 self.n_rebounds += 1
                 if self.n_rebounds_max > -1 and self.n_rebounds > self.n_rebounds_max:
-                    self.XZ = np.insert(self.XZ, i+1, P, axis=0)  # Add final point
+                    self.XZ = np.insert(self.XZ, i+1, P_new, axis=0)  # Add final point
                     if verbose: print(f'DEBUG: Max number of rebounds reached ({self.n_rebounds_max})')
                     self.stop_reason = 'max-rebounds'
                     break
@@ -136,20 +142,20 @@ class Ray2D:
             elif self.__env.ceil and z_new > self.__env.ceil(x_new):
                 x_new = float( self.func_solve( lambda x1: self.__env.ceil(x) - dx_z * (x1 - x) - z, x0=x ))
                 z_new = self.__env.ceil(x_new)
-                P = np.array([x_new, z_new])
+                P_new = np.array([x_new, z_new])
                 u = np.array([1., self.__env.dx_ceil(x_new)])  # Direction of ceiling
                 n = np.array([u[1], -1*u[0]])  # Normal of ceiling, going down
                 k = np.dot(k, u)*u - np.dot(k, n)*n  # Direction of reflected ray
                 self.n_rebounds += 1
                 if self.n_rebounds_max > -1 and self.n_rebounds > self.n_rebounds_max:
-                    self.XZ = np.insert(self.XZ, i+1, P, axis=0)  # Add final point
+                    self.XZ = np.insert(self.XZ, i+1, P_new, axis=0)  # Add final point
                     if verbose: print(f'DEBUG: Max number of rebounds reached ({self.n_rebounds_max})')
                     self.stop_reason = 'max-rebounds'
                     break
                 if verbose: print(f'DEBUG: #{self.n_rebounds} - Ceiling rebound. New dir: {k}')
             
             else:
-                P = np.array([x_new, z_new])
+                P_new = np.array([x_new, z_new])
 
             # Check simulation bounds
             if x_new < self.__env.range_min[0]:
@@ -182,8 +188,15 @@ class Ray2D:
                 break
             
             
+
+            dL = np.linalg.norm(P_new - P)
+            self.dL = np.insert(self.dL, i, dL)
+            self.dA = np.insert(self.dA, i+1, 1.)
+
             # Add new point
-            self.XZ = np.insert(self.XZ, i+1, P, axis=0)
+            self.XZ = np.insert(self.XZ, i+1, P_new, axis=0)
+            P = P_new.copy()
+
             # Calculate new point's properties
             c = calc_c (z_new)
             dz_c = calc_dz_c (z_new)
