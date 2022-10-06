@@ -19,10 +19,7 @@ from scipy.misc import derivative
 from preferences import *
 import physics
 from physics.profile_velocity import calc_c, calc_dz_c
-# from physics.absorption_model import calc_absorption_dB
-# from physics.profile_salinity import calc_S
-# from physics.profile_temperature import calc_T
-# from physics.profile_ph import calc_pH
+from physics.profile_absorption import calc_absorption_dB
 # from physics.surface_reflection_model import calc_refcoef_surface
 # from physics.reflection import reflection_coefficient
 from environment import Environment2D
@@ -31,7 +28,7 @@ from environment import Environment2D
 
 class Ray2D:
 
-    def __init__ (self, env: Environment2D, source: np.ndarray, angle, **kwargs):
+    def __init__ (self, env: Environment2D, source: np.ndarray, freq, angle, **kwargs):
         """
         Initialise ray
         
@@ -48,8 +45,9 @@ class Ray2D:
         self.calc_der = kwargs.get('calc_der', derivative)
         self.func_solve = kwargs.get('func_solve', fsolve)
 
-        self.__source: np.ndarray = source
         self.__env: Environment2D = env
+        self.__source: np.ndarray = source
+        self.__freq = freq
         self.__angle_init = angle
         self.__is_propagated = False
         self.stop_reason = None
@@ -65,7 +63,7 @@ class Ray2D:
 
 
     def __repr__ (self):
-        return f'Ray object'  # TODO: improve repr
+        return f'Ray of frequency {self.__freq}'  # TODO: improve repr
 
     def propagate (self, res='high', **kwargs):
         """
@@ -191,9 +189,11 @@ class Ray2D:
             
             
 
-            dL = np.linalg.norm(P_new - P)
-            self.dL = np.insert(self.dL, i, dL)
-            self.dA = np.insert(self.dA, i+1, 1.)
+            # dL = np.linalg.norm(P_new - P)
+            # self.dL = np.insert(self.dL, i, dL)
+
+            # dA = calc_absorption_dB (self.__freq, z_new) * dL
+            # self.dA = np.insert(self.dA, i+1, dA)
 
             # Add new point
             self.XZ = np.insert(self.XZ, i+1, P_new, axis=0)

@@ -16,12 +16,12 @@ class Simulation2D:
     def __repr__ (self):
         return f'2D simulation containing {self.n_rays} rays'  # TODO: to improve later
 
-    def add_rays (self, source, *angles, **kwargs):
+    def add_rays (self, source, freq, *angles, **kwargs):
         # Supports two rays for the same angle (for example two different frequencies)
 
         for angle in angles:
             # Generate ray
-            ray = Ray2D (self.__env, source, angle)
+            ray = Ray2D (self.__env, source, freq, angle)
             ray.propagate(**kwargs)
 
             # Add ray to simulation
