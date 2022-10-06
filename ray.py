@@ -6,6 +6,7 @@
 # TODO: Add min and max values into self. for when using interpolated function, generated at the same time as the latter
 # TODO: increase pace when far enough away from borders
 # TODO: add a verbose_indent kwargs field to indent verbose when called from Simulation2D with verbose enabled
+# TODO: pregenerate lower-res functions such as calc_absorption in fixed-size arrays to approximate the values if res=low selected
 
 
 import numpy as np
@@ -65,7 +66,7 @@ class Ray2D:
     def __repr__ (self):
         return f'Ray object'  # TODO: improve repr
 
-    def propagate (self, **kwargs):
+    def propagate (self, res='high', **kwargs):
         """
         Propagate ray
 
