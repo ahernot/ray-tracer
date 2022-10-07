@@ -229,11 +229,3 @@ class Ray2D:
         self.calc_z = interpolate.interp1d(self.XZ[:, 0], self.XZ[:, 1], kind='linear')
         
         self.__is_propagated = True
-
-    
-    def calc_absorption (self):
-        # self.dA = np.array([0., ])  # Calculate at each point
-        # dA = calc_absorption_dB (self.__freq, z_new) * dL
-        # self.dA = np.insert(self.dA, i+1, dA)
-        # A = cumulative ~sum~(?) of self.dA
-        pass
