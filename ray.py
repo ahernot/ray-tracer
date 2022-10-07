@@ -7,7 +7,8 @@
 # TODO: increase pace when far enough away from borders
 # TODO: add a verbose_indent kwargs field to indent verbose when called from Simulation2D with verbose enabled
 # TODO: pregenerate lower-res functions such as calc_absorption in fixed-size arrays to approximate the values if res=low selected
-# TODO: optimise the np.insert() function to make it inplace
+# TODO: optimise the np.insert() function to make it inplace (?)
+# TODO: add actual reflection coefficient calculations (instead of the placeholder 0.5)
 
 
 
@@ -130,7 +131,7 @@ class Ray2D:
                 n = np.array([-1*u[1], u[0]])  # Normal of floor, going up
                 k = np.dot(k, u)*u - np.dot(k, n)*n  # Direction of reflected ray
 
-                self.__rebounds.append({'step': i+1, 'coef': 0.5, 'surface': 'ground'})
+                self.__rebounds.append({'step': i+1, 'coef': 0.5, 'surface': 'ground'}) # TODO
                 self.n_rebounds += 1
                 
                 if self.n_rebounds_max > -1 and self.n_rebounds > self.n_rebounds_max:
@@ -149,7 +150,7 @@ class Ray2D:
                 n = np.array([u[1], -1*u[0]])  # Normal of ceiling, going down
                 k = np.dot(k, u)*u - np.dot(k, n)*n  # Direction of reflected ray
 
-                self.__rebounds.append({'step': i+1, 'coef': 0.5, 'surface': 'ground'})
+                self.__rebounds.append({'step': i+1, 'coef': 0.5, 'surface': 'ground'})  # TODO
                 self.n_rebounds += 1
 
                 if self.n_rebounds_max > -1 and self.n_rebounds > self.n_rebounds_max:
