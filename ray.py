@@ -8,7 +8,8 @@
 # TODO: add a verbose_indent kwargs field to indent verbose when called from Simulation2D with verbose enabled
 # TODO: pregenerate lower-res functions such as calc_absorption in fixed-size arrays to approximate the values if res=low selected
 # TODO: optimise the np.insert() function to make it inplace
-# TODO: vectorise self.T (and self.dA?)
+
+
 
 import numpy as np
 
@@ -218,6 +219,7 @@ class Ray2D:
         self.C = calc_c(self.XZ[:-1, 1])  # velocity at each initial point (excluding final point)
         self.dT = self.dL / self.C  # dT at each arrival point (excluding initial point)
         self.T = np.cumsum(np.insert(self.dT, 0, 0.))
+        self.iA = calc_absorption_dB(self.__freq, self.XZ[:-1, 1])  # instantaneous absorption at each initial point
 
 
         # Generate interpolated path function
