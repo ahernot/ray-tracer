@@ -8,7 +8,7 @@
 # TODO: add a verbose_indent kwargs field to indent verbose when called from Simulation2D with verbose enabled
 # TODO: pregenerate lower-res functions such as calc_absorption in fixed-size arrays to approximate the values if res=low selected
 # TODO: optimise the np.insert() function to make it inplace
-
+# TODO: vectorise self.T (and self.dA?)
 
 import numpy as np
 
@@ -56,10 +56,6 @@ class Ray2D:
         self.XZ = np.expand_dims(self.__source.copy(), axis=0)
         self.T = np.array([0.,])
 
-        self.dL = np.array([])  # one element fewer
-        # L = cumulative sum of self.dL
-        self.dA = np.array([0., ])  # Calculate at each point
-        # A = cumulative sum of self.dA
 
 
     def __repr__ (self):
@@ -186,9 +182,7 @@ class Ray2D:
                 if verbose: print('DEBUG: Out of bounds (z-axis max)')
                 self.stop_reason = 'exit-zmax'
                 break
-            
-            # dA = calc_absorption_dB (self.__freq, z_new) * dL
-            # self.dA = np.insert(self.dA, i+1, dA)
+
 
             # Add new point
             self.XZ = np.insert(self.XZ, i+1, P_new, axis=0)
@@ -216,10 +210,25 @@ class Ray2D:
             if verbose and i == self.n_steps_max - 1:
                 self.stop_reason = 'max-iter'
                 print(f'DEBUG: Maximum iterations reached ({self.n_steps_max})')
-        
-        # self.dL = np.linalg.norm(np.diff(self.XZ, axis=0), axis=1)
+    
+
+        # Calculate integration segments
+        self.dL = np.linalg.norm(np.diff(self.XZ, axis=0), axis=1)  # dL at each arrival point (excluding initial point)
+        self.L = np.cumsum(np.insert(self.dL, 0, 0.))
+        self.C = calc_c(self.XZ[:-1, 1])  # velocity at each initial point (excluding final point)
+        self.dT = self.dL / self.C  # dT at each arrival point (excluding initial point)
+        self.T = np.cumsum(np.insert(self.dT, 0, 0.))
+
 
         # Generate interpolated path function
         self.calc_z = interpolate.interp1d(self.XZ[:, 0], self.XZ[:, 1], kind='linear')
         
         self.__is_propagated = True
+
+    
+    def calc_absorption (self):
+        # self.dA = np.array([0., ])  # Calculate at each point
+        # dA = calc_absorption_dB (self.__freq, z_new) * dL
+        # self.dA = np.insert(self.dA, i+1, dA)
+        # A = cumulative ~sum~(?) of self.dA
+        pass
