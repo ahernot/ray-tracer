@@ -187,11 +187,6 @@ class Ray2D:
                 self.stop_reason = 'exit-zmax'
                 break
             
-            
-
-            # dL = np.linalg.norm(P_new - P)
-            # self.dL = np.insert(self.dL, i, dL)
-
             # dA = calc_absorption_dB (self.__freq, z_new) * dL
             # self.dA = np.insert(self.dA, i+1, dA)
 
@@ -221,6 +216,8 @@ class Ray2D:
             if verbose and i == self.n_steps_max - 1:
                 self.stop_reason = 'max-iter'
                 print(f'DEBUG: Maximum iterations reached ({self.n_steps_max})')
+        
+        # self.dL = np.linalg.norm(np.diff(self.XZ, axis=0), axis=1)
 
         # Generate interpolated path function
         self.calc_z = interpolate.interp1d(self.XZ[:, 0], self.XZ[:, 1], kind='linear')
