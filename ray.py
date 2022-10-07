@@ -216,10 +216,13 @@ class Ray2D:
         # Calculate integration segments
         self.dL = np.linalg.norm(np.diff(self.XZ, axis=0), axis=1)  # dL at each arrival point (excluding initial point)
         self.L = np.cumsum(np.insert(self.dL, 0, 0.))
-        self.C = calc_c(self.XZ[:-1, 1])  # velocity at each initial point (excluding final point)
-        self.dT = self.dL / self.C  # dT at each arrival point (excluding initial point)
+        self.C = calc_c(self.XZ[:, 1])  # velocity at each point
+        self.dT = self.dL / self.C[:-1]  # dT at each arrival point (excluding initial point)
         self.T = np.cumsum(np.insert(self.dT, 0, 0.))
-        self.iA = calc_absorption_dB(self.__freq, self.XZ[:-1, 1])  # instantaneous absorption at each initial point
+
+        self.dA_dB = calc_absorption_dB(self.__freq, self.XZ[:-1, 1]) / 1000 * self.dL  # dA_dB for each dL (decibels)
+        self.A_dB = np.cumsum(np.insert(self.dA_dB, 0, 0.))  # cumulative absorption for each point (decibels)
+        self.A_coef = np.power(10, -1 * self.A_dB / 10)  # cumulative absorption for each point (coefficient)
 
 
         # Generate interpolated path function
