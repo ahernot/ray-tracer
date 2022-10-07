@@ -56,6 +56,7 @@ class Ray2D:
         # Initialise
         self.XZ = np.expand_dims(self.__source.copy(), axis=0)
         self.T = np.array([0.,])
+        self.steps = 1
 
 
 
@@ -86,6 +87,7 @@ class Ray2D:
         self.n_steps_max = kwargs.get('n_steps_max', N_STEPS_MAX)
         self.n_rebounds_max = kwargs.get('n_rebounds_max', N_REBOUNDS_MAX)
         self.n_rebounds = 0
+        self.__rebounds = list()
 
         # Ray speed functions (x-invariant)
         calc_c = kwargs.get('calc_c', physics.profile_velocity.calc_c)  # Ray speed function (x-invariant)
@@ -127,7 +129,10 @@ class Ray2D:
                 u = np.array([1., self.__env.dx_floor(x_new)])  # Direction of floor
                 n = np.array([-1*u[1], u[0]])  # Normal of floor, going up
                 k = np.dot(k, u)*u - np.dot(k, n)*n  # Direction of reflected ray
+
+                self.__rebounds.append({'step': i+1, 'coef': 0.5, 'surface': 'ground'})
                 self.n_rebounds += 1
+                
                 if self.n_rebounds_max > -1 and self.n_rebounds > self.n_rebounds_max:
                     self.XZ = np.insert(self.XZ, i+1, P_new, axis=0)  # Add final point
                     if verbose: print(f'DEBUG: Max number of rebounds reached ({self.n_rebounds_max})')
@@ -143,7 +148,10 @@ class Ray2D:
                 u = np.array([1., self.__env.dx_ceil(x_new)])  # Direction of ceiling
                 n = np.array([u[1], -1*u[0]])  # Normal of ceiling, going down
                 k = np.dot(k, u)*u - np.dot(k, n)*n  # Direction of reflected ray
+
+                self.__rebounds.append({'step': i+1, 'coef': 0.5, 'surface': 'ground'})
                 self.n_rebounds += 1
+
                 if self.n_rebounds_max > -1 and self.n_rebounds > self.n_rebounds_max:
                     self.XZ = np.insert(self.XZ, i+1, P_new, axis=0)  # Add final point
                     if verbose: print(f'DEBUG: Max number of rebounds reached ({self.n_rebounds_max})')
@@ -211,7 +219,9 @@ class Ray2D:
             if verbose and i == self.n_steps_max - 1:
                 self.stop_reason = 'max-iter'
                 print(f'DEBUG: Maximum iterations reached ({self.n_steps_max})')
-    
+
+        # Count simulation steps
+        self.steps = self.XZ.shape[0]
 
         # Calculate integration segments
         self.dL = np.linalg.norm(np.diff(self.XZ, axis=0), axis=1)  # dL at each arrival point (excluding initial point)
@@ -220,9 +230,15 @@ class Ray2D:
         self.dT = self.dL / self.C[:-1]  # dT at each arrival point (excluding initial point)
         self.T = np.cumsum(np.insert(self.dT, 0, 0.))
 
-        self.dA_dB = calc_absorption_dB(self.__freq, self.XZ[:-1, 1]) / 1000 * self.dL  # dA_dB for each dL (decibels)
-        self.A_dB = np.cumsum(np.insert(self.dA_dB, 0, 0.))  # cumulative absorption for each point (decibels)
-        self.A_coef = np.power(10, -1 * self.A_dB / 10)  # cumulative absorption for each point (coefficient)
+        # Calculate cumulative absorption multiplier
+        dA_dB = calc_absorption_dB(self.__freq, self.XZ[:-1, 1]) / 1000 * self.dL  # dA_dB for each dL (decibels)
+        A_dB = np.cumsum(np.insert(dA_dB, 0, 0.))  # cumulative absorption for each point (decibels)
+        self.A = np.power(10, -1 * A_dB / 10)  # cumulative absorption for each point (coefficient)
+        for rebound in self.__rebounds:
+            A_mult = np.ones((self.steps), dtype=float)
+            A_mult[rebound['step']+1:] *= rebound['coef']
+            self.A *= A_mult
+        self.A_dB = -10 * np.log10(self.A)
 
 
         # Generate interpolated path function
