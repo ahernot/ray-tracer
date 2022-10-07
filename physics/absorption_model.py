@@ -16,7 +16,7 @@ def calc_absorption_dB (f: float, z: float, T: float, S: float, pH: float):
     # http://resource.npl.co.uk/acoustics/techguides/seaabsorption/
     # http://resource.npl.co.uk/acoustics/techguides/seaabsorption/physics.html
 
-    f /= 1000
+    f /= 1000   # to get f in kHz for the formula
 
     # Boric acid (relaxation absorption)
     f1 = 0.78 * np.sqrt(S / 35) * np.exp(T / 26)  # Boric acid relaxation frequency (kHz)
@@ -38,6 +38,4 @@ def calc_absorption_dB (f: float, z: float, T: float, S: float, pH: float):
             alpha_3 * np.exp(z / 17000 - T / 27)
 
 
-    return alpha
-
-# output in dB/m or dB/km???
+    return alpha  # dB/km
