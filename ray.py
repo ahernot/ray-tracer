@@ -9,6 +9,7 @@
 # TODO: pregenerate lower-res functions such as calc_absorption in fixed-size arrays to approximate the values if res=low selected
 # TODO: optimise the np.insert() function to make it inplace (?)
 # TODO: add actual reflection coefficient calculations (instead of the placeholder 0.5)
+# TODO: add an absorption_max criteria (either in mult or in dB)
 
 
 
