@@ -75,7 +75,7 @@ class Ray2D:
         :param dx_max:
         :param dz_max:
         :param n_steps_max:
-        :param n_rebounds_max:
+        :param n_rebounds_max: Maximum number of rebounds (default=infinite)
         :param verbose: Verbose (default=False)
         """
 
