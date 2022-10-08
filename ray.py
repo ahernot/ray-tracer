@@ -22,8 +22,7 @@ from preferences import *
 import physics
 from physics.profile_velocity import calc_c, calc_dz_c
 from physics.profile_absorption import calc_absorption_dB
-# from physics.surface_reflection_model import calc_refcoef_surface
-# from physics.reflection import reflection_coefficient
+from physics.model_reflection import calc_refcoef_surface
 from environment import Environment2D
 
 
@@ -150,7 +149,7 @@ class Ray2D:
                 n = np.array([u[1], -1*u[0]])  # Normal of ceiling, going down
                 k = np.dot(k, u)*u - np.dot(k, n)*n  # Direction of reflected ray
 
-                self.__rebounds.append({'step': i+1, 'coef': 0.5, 'surface': 'ground'})  # TODO
+                self.__rebounds.append({'step': i+1, 'coef': 0.5, 'surface': 'water-surface'})  # TODO
                 self.n_rebounds += 1
 
                 if self.n_rebounds_max > -1 and self.n_rebounds > self.n_rebounds_max:

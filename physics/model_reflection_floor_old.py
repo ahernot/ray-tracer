@@ -1,6 +1,6 @@
 import numpy as np
 from scipy import interpolate
-import physics.velocity_models as VM
+import physics.model_velocity as VM
 from physics.profile_temperature import calc_T
 from physics.profile_pressure import calc_p
 

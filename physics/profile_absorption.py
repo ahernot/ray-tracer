@@ -4,7 +4,7 @@
 from physics.profile_ph import calc_pH
 from physics.profile_salinity import calc_S
 from physics.profile_temperature import calc_T
-from physics import absorption_model
+from physics import model_absorption
 
 
-calc_absorption_dB = lambda f, z: absorption_model.calc_absorption_dB(f, z, calc_T(z), calc_S(z), calc_pH(z))
+calc_absorption_dB = lambda f, z: model_absorption.calc_absorption_dB(f, z, calc_T(z), calc_S(z), calc_pH(z))

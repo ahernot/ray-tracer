@@ -6,7 +6,7 @@ from scipy import interpolate
 
 from physics.profile_salinity import calc_S
 from physics.profile_temperature import calc_T
-from physics.velocity_models import sound_velocity_medwin
+from physics.model_velocity import sound_velocity_medwin
 
 
 calc_c = lambda z: sound_velocity_medwin(calc_S(z), calc_T(z), z)  # vectorised
