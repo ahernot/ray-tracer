@@ -10,6 +10,7 @@
 # TODO: optimise the np.insert() function to make it inplace (?)
 # TODO: add actual reflection coefficient calculations (instead of the placeholder 0.5)
 # TODO: add an absorption_max criteria (either in mult or in dB)
+# TODO: make class attributes such as freq etc. public
 
 
 
@@ -27,6 +28,8 @@ from physics.model_reflection import calc_refcoef_surface
 from environment import Environment2D
 
 
+
+WAVE_HEIGHT_RMS_DEFAULT = 2.  # To change later
 
 class Ray2D:
 
@@ -108,8 +111,8 @@ class Ray2D:
         x_dir = 1.  # forwards propagation
         k = np.array([x_dir, dx_z])
         # Initialise solver
-        c0 = calc_c(0)
-        mult = -1 * np.power(c0 / np.sin(angle), 2)  # differential equation multiplier
+        c = calc_c(0)
+        mult = -1 * np.power(c / np.sin(angle), 2)  # differential equation multiplier
 
 
         for i in range(self.n_steps_max):
@@ -131,7 +134,11 @@ class Ray2D:
                 n = np.array([-1*u[1], u[0]])  # Normal of floor, going up
                 k = np.dot(k, u)*u - np.dot(k, n)*n  # Direction of reflected ray
 
-                self.__rebounds.append({'step': i+1, 'coef': 0.5, 'surface': 'ground'}) # TODO
+                # Calculate reflection coefficient
+                wavelength = c / self.__freq
+                angle = 1 / ((1 + (k[1]/k[0]) ** 2) ** 0.5)
+                refcoef = calc_refcoef_surface(wavelength=wavelength, angle=angle, wave_height_rms=WAVE_HEIGHT_RMS_DEFAULT)
+                self.__rebounds.append({'step': i+1, 'coef': refcoef, 'surface': 'ground'}) # TODO
                 self.n_rebounds += 1
                 
                 if self.n_rebounds_max > -1 and self.n_rebounds > self.n_rebounds_max:
@@ -238,7 +245,7 @@ class Ray2D:
         for rebound in self.__rebounds:
             A_mult = np.ones((self.steps), dtype=float)
             A_mult[rebound['step']+1:] *= rebound['coef']
-            self.A *= A_mult
+            self.A *= A_mult  # TODO: apply reflection absorption in dB (cf. paper) to self.A_dB and then convert to self.A
         self.A_dB = -10 * np.log10(self.A)
 
 
