@@ -13,6 +13,10 @@ class Simulation2D:
         self.n_rays = 0
         self.n_angles = 0
 
+        self.range_min = self.env.range_min
+        self.range_max = self.env.range_max
+        self.size = self.range_max - self.range_min
+
     def __repr__ (self):
         return f'2D simulation containing {self.n_rays} rays'  # TODO: to improve later
 

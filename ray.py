@@ -62,6 +62,9 @@ class Ray2D:
         self.T = np.array([0.,])
         self.steps = 1
 
+        self.range_min = np.zeros(2)
+        self.range_max = np.zeros(2)
+
 
 
     def __repr__ (self):
@@ -234,6 +237,10 @@ class Ray2D:
 
         # Count simulation steps
         self.steps = self.XZ.shape[0]
+
+        # Update range
+        self.range_min = np.array([np.min(self.XZ[:, 0], np.min(self.XZ[:, 1]))])
+        self.range_max = np.array([np.max(self.XZ[:, 0], np.max(self.XZ[:, 1]))])
 
         # Calculate integration segments
         self.dL = np.linalg.norm(np.diff(self.XZ, axis=0), axis=1)  # dL at each arrival point (excluding initial point)
