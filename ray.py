@@ -30,7 +30,6 @@ from environment import Environment2D
 
 
 
-WAVE_HEIGHT_RMS_DEFAULT = 2.  # To change later
 
 class Ray2D:
 
