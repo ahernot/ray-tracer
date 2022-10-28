@@ -1,4 +1,4 @@
-# velocity_models v1.0
+# model_velocity v1.0
 # Copyright Anatole Hernot (Mines Paris), 2022. All rights reserved.
 
 import numpy as np
