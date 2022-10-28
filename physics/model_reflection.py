@@ -1,5 +1,6 @@
 # model_reflection v2.0
 # Copyright Anatole Hernot (Mines Paris), 2022. All rights reserved.
+# TODO: return complex impedance
 
 import numpy as np
 
@@ -43,4 +44,4 @@ def calc_refcoef_sediment (angle, Zp0, Zp1 = Zp1_DEFAULT, Zp2 = Zp2_DEFAULT, dz_
     r12_exp = r12 * np.exp(-2j * gamma_p1 * dz_sediment)
     refcoef = (r01 + r12_exp) / (1 + r01 * r12_exp)
 
-    return refcoef
+    return np.abs(refcoef)

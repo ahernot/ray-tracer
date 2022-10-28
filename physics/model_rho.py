@@ -41,9 +41,9 @@ def calc_rho (z, S, T, P):
         (-9.9348e-7 + 2.0816e-8 * T + 9.1697e-10 * np.power(T, 2)) * S
 
     # Secant Bulk Modulus
-    K = K_1atm + A * p + B * np.power(p, 2)
+    K = K_1atm + A * P + B * np.power(P, 2)
 
     # High Pressure International Equation of State of Seawater
-    rho = rho_1atm / (1 - p / K)
+    rho = rho_1atm / (1 - P / K)
     
     return rho
