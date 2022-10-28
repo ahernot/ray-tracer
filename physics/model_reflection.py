@@ -18,10 +18,10 @@ def calc_refcoef_surface (wavelength, angle, wave_height_rms = WAVE_HEIGHT_RMS_D
     return np.exp (-2 * np.power(2 * np.pi / wavelength * wave_height_rms * np.sin(angle), 2))
 
 
-def calc_refcoef_sediment (angle, Zp0, Zp1 = Zp1_DEFAULT, Zp2 = Zp2_DEFAULT, dz_sediment = DZ_SEDIMENT_DEFAULT):
+def calc_refcoef_sediment (wavelength, Zp0, Zp1 = Zp1_DEFAULT, Zp2 = Zp2_DEFAULT, dz_sediment = DZ_SEDIMENT_DEFAULT):
     """
     
-    :param angle: Grazing angle (in radians) - complementary to the incident angle
+    :param angle: Grazing angle of the transmitted shear wave in the solid bottom half-space (in radians)
     :param Zp0: Specific acoustic impedance for compression in the water column (in kg/(s*m**2))
     :param Zp1: Specific acoustic impedance for compression in the sediment layer (in kg/(s*m**2))
     :param Zp2: Specific acoustic impedance for compression in the solid bottom (in kg/(s*m**2))
@@ -30,10 +30,10 @@ def calc_refcoef_sediment (angle, Zp0, Zp1 = Zp1_DEFAULT, Zp2 = Zp2_DEFAULT, dz_
 
     # Ignore shear waves
     Zs2 = 0
-    theta_s2 = 0
+    theta_s2 = 0  # Grazing angle of the transmitted shear wave in the solid bottom half-space (in radians)
 
-    # Calculate vertical wave number for sediment layer
-    gamma_p1 = np.sin(angle)  # sin of grazing angle (?)
+    # Calculate vertical wave number for sediment layer (assuming no refraction at sediment layer interface with water)
+    k1 = 2 * np.pi / wavelength
     
     # Calculate reflection coefficients
     Zp2_cos2 = Zp2 if theta_s2 == 0             else Zp2 * np.power(np.cos(2 * theta_s2), 2)
@@ -42,7 +42,7 @@ def calc_refcoef_sediment (angle, Zp0, Zp1 = Zp1_DEFAULT, Zp2 = Zp2_DEFAULT, dz_
     r12 = (Zp2_cos2 + Zs2_sin2 - Zp1) / (Zp2_cos2 + Zs2_sin2 + Zp1)
 
     # Combine reflection coefficients
-    r12_exp = r12 * np.exp(-2j * gamma_p1 * dz_sediment)
+    r12_exp = r12 * np.exp(-2j * k1 * dz_sediment)
     refcoef = (r01 + r12_exp) / (1 + r01 * r12_exp)
 
     return np.abs(refcoef)

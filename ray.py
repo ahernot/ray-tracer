@@ -137,7 +137,7 @@ class Ray2D:
                 # Calculate reflection coefficient
                 wavelength = c / self.__freq
                 angle = 1 / ((1 + (k[1]/k[0]) ** 2) ** 0.5)
-                refcoef = calc_refcoef_surface(wavelength=wavelength, angle=angle, wave_height_rms=WAVE_HEIGHT_RMS_DEFAULT)
+                refcoef = calc_refcoef_surface(wavelength=wavelength, angle=angle)
                 self.__rebounds.append({'step': i+1, 'coef': refcoef, 'surface': 'ground'}) # TODO
                 self.n_rebounds += 1
                 
@@ -158,8 +158,9 @@ class Ray2D:
                 k = np.dot(k, u)*u - np.dot(k, n)*n  # Direction of reflected ray
 
                 # Calculate reflection coefficient
+                wavelength = c / self.__freq
                 angle = 1 / ((1 + (k[1]/k[0]) ** 2) ** 0.5)
-                refcoef = calc_refcoef_sediment(angle, Zp0=calc_Z(z), dz_sediment=2)  # use c from previous iteration
+                refcoef = calc_refcoef_sediment(wavelength=wavelength, Zp0=calc_Z(z))  # use c from previous iteration
                 self.__rebounds.append({'step': i+1, 'coef': refcoef, 'surface': 'water-surface'})  # TODO
                 self.n_rebounds += 1
 
