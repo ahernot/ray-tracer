@@ -4,7 +4,7 @@
 import numpy as np
 
 
-def calc_p (z):
+def calc_P (z):
     """
     Calculate applied pressure
     """

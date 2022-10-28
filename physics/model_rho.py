@@ -3,21 +3,17 @@
 
 import numpy as np
 
-from physics.profile_salinity import calc_S
 
 
-def calc_rho (z, S=calc_S(z)):
+def calc_rho (z, S, T, P):
     """
     IES 80 - High Pressure International Equation of State of Seawater : https://unesdoc.unesco.org/ark:/48223/pf0000047363
-    :param S: Practical salinity (‰), range:   0‰ ≤ S ≤ 42‰
     :param z: Depth (m), range: -1000 ≤ z ≤ 0
+    :param S: Practical salinity (‰), range:   0‰ ≤ S ≤ 42‰
+    :param T: Temperature
+    :param P: Pressure
     :returns: Seawater density (in kg.m^-3)
     """
-
-    T = calc_T(z)
-
-    #pressure linearily increases with depth
-    p = calc_p(z)  # pressure in bar
  
     # Density of the Standard Mean Ocean Water (SMOW) [Bigg, 1967]
     rho_W = 999.842594 + 6.793952e-2 * T - 9.09529e-3 * np.power(T, 2) + 1.001685e-4 * np.power(T, 3) - 1.120083e-6 * np.power(T, 4) + 6.536336e-9 * np.power(T, 5)

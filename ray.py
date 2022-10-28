@@ -22,9 +22,10 @@ from scipy.misc import derivative
 
 from preferences import *
 import physics
+from physics.model_impedance import calc_Z
+from physics.model_reflection import calc_refcoef_surface, calc_refcoef_sediment
 from physics.profile_velocity import calc_c, calc_dz_c
 from physics.profile_absorption import calc_absorption_dB
-from physics.model_reflection import calc_refcoef_crr
 from environment import Environment2D
 
 
@@ -137,7 +138,7 @@ class Ray2D:
                 # Calculate reflection coefficient
                 wavelength = c / self.__freq
                 angle = 1 / ((1 + (k[1]/k[0]) ** 2) ** 0.5)
-                refcoef = calc_refcoef_crr(wavelength=wavelength, angle=angle, wave_height_rms=WAVE_HEIGHT_RMS_DEFAULT)
+                refcoef = calc_refcoef_surface(wavelength=wavelength, angle=angle, wave_height_rms=WAVE_HEIGHT_RMS_DEFAULT)
                 self.__rebounds.append({'step': i+1, 'coef': refcoef, 'surface': 'ground'}) # TODO
                 self.n_rebounds += 1
                 
@@ -157,7 +158,10 @@ class Ray2D:
                 n = np.array([u[1], -1*u[0]])  # Normal of ceiling, going down
                 k = np.dot(k, u)*u - np.dot(k, n)*n  # Direction of reflected ray
 
-                self.__rebounds.append({'step': i+1, 'coef': 0.5, 'surface': 'water-surface'})  # TODO
+                # Calculate reflection coefficient
+                angle = 1 / ((1 + (k[1]/k[0]) ** 2) ** 0.5)
+                refcoef = calc_refcoef_sediment(angle, Zp0=calc_Z(z), dz_sediment=2)  # use c from previous iteration
+                self.__rebounds.append({'step': i+1, 'coef': refcoef, 'surface': 'water-surface'})  # TODO
                 self.n_rebounds += 1
 
                 if self.n_rebounds_max > -1 and self.n_rebounds > self.n_rebounds_max:
