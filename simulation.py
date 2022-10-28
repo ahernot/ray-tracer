@@ -6,9 +6,9 @@ from ray import Ray2D
 class Simulation2D:
 
     def __init__ (self, env: Environment2D):
-        self.__env = env
-        self.__rays = list()  # Raw list of rays (stored as references to Ray2D objects)
-        self.__angles = dict()  # Dictionary of Ray2D objects grouped by angle
+        self.env = env
+        self.rays = list()  # Raw list of rays (stored as references to Ray2D objects)
+        self.angles = dict()  # Dictionary of Ray2D objects grouped by angle
         # can group rays by frequency or some other key if needed
         self.n_rays = 0
         self.n_angles = 0
@@ -21,18 +21,16 @@ class Simulation2D:
 
         for angle in angles:
             # Generate ray
-            ray = Ray2D (self.__env, source, freq, angle)
+            ray = Ray2D (self.env, source, freq, angle)
             ray.propagate(**kwargs)
 
             # Add ray to simulation
-            self.__rays .append(ray)
-            self.__angles[angle] = self.__angles[angle] + [ray] if angle in self.__angles else [ray]
+            self.rays .append(ray)
+            self.angles[angle] = self.angles[angle] + [ray] if angle in self.angles else [ray]
         
-        self.n_rays = len(self.__rays)
-        self.n_angles = len(self.__angles)
+        self.n_rays = len(self.rays)
+        self.n_angles = len(self.angles)
 
-    def get_rays (self):
-        return self.__rays
 
     def plot (self):
         # Plot environment (floor & ceiling for now)
