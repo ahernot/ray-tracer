@@ -11,18 +11,12 @@ SPEED = {'simp' : VM.sound_velocity_simplified, 'leroy' : VM.sound_velocity_lero
 
 
 
-def rho_seawater(S, z):
+def calc_rho (S, z):
     """
-    from : IES 80 – High Pressure International Equation of State of Seawater : https://unesdoc.unesco.org/ark:/48223/pf0000047363
-    
-    input :
-
-    S: float : Practical salinity (‰), range:   0‰ ≤ S ≤ 42‰
-    z: float : depth (m), range: -1000 ≤ z ≤ 0
-
-    output
-
-    rho : float : Seawater density (in kg.m^-3)
+    IES 80 – High Pressure International Equation of State of Seawater : https://unesdoc.unesco.org/ark:/48223/pf0000047363
+    :param S: Practical salinity (‰), range:   0‰ ≤ S ≤ 42‰
+    :param z: Depth (m), range: -1000 ≤ z ≤ 0
+    :returns: Seawater density (in kg.m^-3)
     """
 
     T = calc_T(z)
@@ -68,13 +62,15 @@ def characteristic_specific_acoustic_impedance(density, speed) :
     Z = density*speed
     return Z
 
-depth = np.arange(-1000,1,50)
-rho = rho_seawater(35,depth)
-mean_rho = np.mean(rho)
-mean_c =1500
+S = 35
+z = np.arange(-1000, 1, 50)
+
+rho = calc_rho(S, z)
+rho_avg = np.mean(rho)
+mean_c = 1500
 
 ZP0_REFERENCE_VALUES = {
-    "estimation" : mean_rho*mean_c
+    "estimation" : rho_avg * mean_c
 } #unit : kg/(s*cm**2)
 
 
