@@ -6,7 +6,7 @@ import numpy as np
 
 def calc_rho (S, z):
     """
-    IES 80 – High Pressure International Equation of State of Seawater : https://unesdoc.unesco.org/ark:/48223/pf0000047363
+    IES 80 - High Pressure International Equation of State of Seawater : https://unesdoc.unesco.org/ark:/48223/pf0000047363
     :param S: Practical salinity (‰), range:   0‰ ≤ S ≤ 42‰
     :param z: Depth (m), range: -1000 ≤ z ≤ 0
     :returns: Seawater density (in kg.m^-3)
