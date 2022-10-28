@@ -3,8 +3,10 @@
 
 import numpy as np
 
+from physics.profile_salinity import calc_S
 
-def calc_rho (S, z):
+
+def calc_rho (z, S=calc_S(z)):
     """
     IES 80 - High Pressure International Equation of State of Seawater : https://unesdoc.unesco.org/ark:/48223/pf0000047363
     :param S: Practical salinity (‰), range:   0‰ ≤ S ≤ 42‰

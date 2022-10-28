@@ -4,7 +4,7 @@
 import numpy as np
 
 
-def sound_velocity_simplified (S, T, z):
+def sound_velocity_simplified (z, S, T):
     """
     Sound velocity in seawater (simplified formula)
     http://lecalve.univ-tln.fr/oceano/fiches/fiche3F.htm
@@ -20,7 +20,7 @@ def sound_velocity_simplified (S, T, z):
     return c
 
 
-def sound_velocity_leroy (S, T, z):
+def sound_velocity_leroy (z, S, T):
     """
     Sound velocity in seawater (Claude Leroy)
     http://lecalve.univ-tln.fr/oceano/fiches/fiche3F.htm
@@ -39,7 +39,7 @@ def sound_velocity_leroy (S, T, z):
     return c
     
 
-def sound_velocity_medwin (S, T, z):
+def sound_velocity_medwin (z, S, T):
     """
     Sound velocity in seawater (H. Medwin)
     http://lecalve.univ-tln.fr/oceano/fiches/fiche3F.htm
@@ -58,7 +58,7 @@ def sound_velocity_medwin (S, T, z):
     return c
 
 
-def sound_velocity_mackenzie (S, T, z):
+def sound_velocity_mackenzie (z, S, T):
     """
     Sound velocity in seawater (Mackenzie)
     http://lecalve.univ-tln.fr/oceano/fiches/fiche3F.htm

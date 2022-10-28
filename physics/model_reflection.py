@@ -3,10 +3,10 @@
 
 import numpy as np
 
-from profile_impedance import Zp1_DEFAULT, Zp2_DEFAULT
+from physics.profile_impedance import Zp1_DEFAULT, Zp2_DEFAULT
 
 
-def calc_refcoef_crr (wavelength, angle, wave_height_rms):
+def calc_refcoef_surface (wavelength, angle, wave_height_rms):
     """
     Coherent rough surface reflection coefficient
     :param wavelength: Ray wavelength
@@ -16,7 +16,7 @@ def calc_refcoef_crr (wavelength, angle, wave_height_rms):
     return np.exp (-2 * np.power(2 * np.pi / wavelength * wave_height_rms * np.sin(angle), 2))
 
 
-def calc_refcoef (angle, Zp0, Zp1 = Zp1_DEFAULT, Zp2 = Zp2_DEFAULT, dz_sediment = 2):
+def calc_refcoef_sediment (angle, Zp0, Zp1 = Zp1_DEFAULT, Zp2 = Zp2_DEFAULT, dz_sediment = 2):
     """
     
     :param angle: Grazing angle (in radians) - complementary to the incident angle
