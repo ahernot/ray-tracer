@@ -1,3 +1,8 @@
+# 2D Ray Simulation (v1.0)
+# Copyright Anatole Hernot (Mines Paris), 2022. All rights reserved.
+
+import numpy as np
+
 from environment import Environment2D
 from ray import Ray2D
 
@@ -13,9 +18,9 @@ class Simulation2D:
         self.n_rays = 0
         self.n_angles = 0
 
-        self.range_min = self.env.range_min
-        self.range_max = self.env.range_max
-        self.size = self.range_max - self.range_min
+        self.range_min = np.zeros(2)
+        self.range_max = np.zeros(2)
+        self.size = np.zeros(2)
 
     def __repr__ (self):
         return f'2D simulation containing {self.n_rays} rays'  # TODO: to improve later
@@ -31,9 +36,19 @@ class Simulation2D:
             # Add ray to simulation
             self.rays .append(ray)
             self.angles[angle] = self.angles[angle] + [ray] if angle in self.angles else [ray]
-        
+
+            # Update simulation range
+            if ray.range_min[0] < self.range_min[0]: self.range_min[0] = ray.range_min[0]
+            if ray.range_min[1] < self.range_min[1]: self.range_min[1] = ray.range_min[1]
+            if ray.range_max[0] > self.range_max[0]: self.range_max[0] = ray.range_max[0]
+            if ray.range_max[1] > self.range_max[1]: self.range_max[1] = ray.range_max[1]
+
+        # Update simulation size
+        self.size = self.range_max - self.range_min
+
         self.n_rays = len(self.rays)
         self.n_angles = len(self.angles)
+
 
 
     def plot (self):
