@@ -17,6 +17,7 @@ class Simulation2D:
         # can group rays by frequency or some other key if needed
         self.n_rays = 0
         self.n_angles = 0
+        # self.n_freqs = 0  # TODO
 
         self.range_min = np.zeros(2)
         self.range_max = np.zeros(2)
@@ -50,6 +51,47 @@ class Simulation2D:
         self.n_angles = len(self.angles)
 
 
+    def heatmap (self, **kwargs):
+        """
+        Generate heatmap of ray power
+        kwargs:
+        :param res: Resolution (in meters)
+        :param cutoff:
+        """
+        res = kwargs.get('resolution', np.array([50, 25]))
+        cutoff = kwargs.get('cutoff', 150)
+
+        # Initialise heatmap
+        xdim, ydim = heatmap_shape = np.ceil(self.size/res).astype(int)
+        heatmap_full = np.zeros(heatmap_shape)
+
+        # Trace rays
+        for ray in self.rays:
+            rx = ray.XZ.copy().astype(int)
+
+            # Homonegeneise bounds
+            rx = np.insert(rx, 0, self.range_min, axis=0)
+            rx = np.insert(rx, 0, self.range_max, axis=0)
+
+            # Downsample
+            x = rx[:, 0] // res[0]
+            y = rx[:, 1] // -1 * res[1]
+
+            # Add ray's 2D histogram
+            heatmap, xedges, yedges = np.histogram2d(x, y, bins=heatmap_shape)
+            heatmap_full += heatmap
+
+        # Process heatmap
+        heatmap_full[heatmap_full > cutoff] = cutoff
+        heatmap_norm = heatmap_full / np.max(heatmap_full)
+        heatmap_plot = np.log(heatmap_norm + 1.)
+
+        # TODO: plot ground (convex assumption)
+        # z_floor = self.env.floor(np.arange(0, xdim, 1) * res[0])
+        # z_width = np.arange(0, ydim, 1) * -1 * res[1]
+        # floor_mask = (np.tile(z_width, (xdim, 1)).T < z_floor).T
+
+        return heatmap_plot
 
     def plot (self):
         # Plot environment (floor & ceiling for now)
