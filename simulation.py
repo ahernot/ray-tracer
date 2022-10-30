@@ -6,7 +6,7 @@ import numpy as np
 from environment import Environment2D
 from ray import Ray2D
 
-
+# TODO: simulation to rename source, to include inside of a simulation
 
 class Simulation2D:
 
@@ -17,6 +17,7 @@ class Simulation2D:
 
         kwargs:
         :param power: Combined source power
+        :param spectrum: Power spectrum
         """
         
         self.env = env
@@ -29,6 +30,7 @@ class Simulation2D:
         # self.n_freqs = 0  # TODO
 
         self.power = kwargs.get('power', 1.)
+        self.spectrum = kwargs.get('spectrum', lambda x: 1.)  # weights of the average for the frequencies
 
         self.range_min = np.zeros(2)
         self.range_max = np.zeros(2)
