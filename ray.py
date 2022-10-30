@@ -50,15 +50,16 @@ class Ray2D:
         self.calc_der = kwargs.get('calc_der', derivative)
         self.func_solve = kwargs.get('func_solve', fsolve)
 
-        self.__env: Environment2D = env
-        self.__source: np.ndarray = source
-        self.__freq = freq
-        self.__angle_init = angle
         self.__is_propagated = False
+
+        self.env: Environment2D = env
+        self.source: np.ndarray = source
+        self.freq = freq
+        self.angle_init = angle
         self.stop_reason = None
 
         # Initialise
-        self.XZ = np.expand_dims(self.__source.copy(), axis=0)
+        self.XZ = np.expand_dims(self.source.copy(), axis=0)
         self.T = np.array([0.,])
         self.steps = 1
 
@@ -68,7 +69,7 @@ class Ray2D:
 
 
     def __repr__ (self):
-        return f'Ray of frequency {self.__freq}'  # TODO: improve repr
+        return f'Ray of frequency {self.freq}'  # TODO: improve repr
 
     def propagate (self, res='high', **kwargs):
         """
@@ -107,8 +108,8 @@ class Ray2D:
 
 
         # Initialise
-        P = self.__source
-        angle = -1 * self.__angle_init + (np.pi / 2)  # convert angle notation
+        P = self.source
+        angle = -1 * self.angle_init + (np.pi / 2)  # convert angle notation
         dx_z = 1 / np.tan(angle)
         dxdx_z = 0  # no initial curvature
         x_dir = 1.  # forwards propagation
@@ -129,16 +130,16 @@ class Ray2D:
             x_new, z_new = P_new = P + k
 
             # Check floor rebounds
-            if self.__env.floor and z_new < self.__env.floor(x_new):  # Calculate intersection point and new direction vector
-                x_new = float( self.func_solve( lambda x1: self.__env.floor(x) - dx_z * (x1 - x) - z, x0=x ))
-                z_new = self.__env.floor(x_new)
+            if self.env.floor and z_new < self.env.floor(x_new):  # Calculate intersection point and new direction vector
+                x_new = float( self.func_solve( lambda x1: self.env.floor(x) - dx_z * (x1 - x) - z, x0=x ))
+                z_new = self.env.floor(x_new)
                 P_new = np.array([x_new, z_new])
-                u = np.array([1., self.__env.dx_floor(x_new)])  # Direction of floor
+                u = np.array([1., self.env.dx_floor(x_new)])  # Direction of floor
                 n = np.array([-1*u[1], u[0]])  # Normal of floor, going up
                 k = np.dot(k, u)*u - np.dot(k, n)*n  # Direction of reflected ray
 
                 # Calculate reflection coefficient
-                wavelength = c / self.__freq
+                wavelength = c / self.freq
                 angle = 1 / ((1 + (k[1]/k[0]) ** 2) ** 0.5)
                 refcoef = calc_refcoef_surface(wavelength=wavelength, angle=angle)
                 self.__rebounds.append({'step': i+1, 'coef': refcoef, 'surface': 'ground'}) # TODO
@@ -152,16 +153,16 @@ class Ray2D:
                 if verbose: print(f'DEBUG: #{self.n_rebounds} - Floor rebound. New dir: {k}')
 
             # Check ceiling rebounds
-            elif self.__env.ceil and z_new > self.__env.ceil(x_new):
-                x_new = float( self.func_solve( lambda x1: self.__env.ceil(x) - dx_z * (x1 - x) - z, x0=x ))
-                z_new = self.__env.ceil(x_new)
+            elif self.env.ceil and z_new > self.env.ceil(x_new):
+                x_new = float( self.func_solve( lambda x1: self.env.ceil(x) - dx_z * (x1 - x) - z, x0=x ))
+                z_new = self.env.ceil(x_new)
                 P_new = np.array([x_new, z_new])
-                u = np.array([1., self.__env.dx_ceil(x_new)])  # Direction of ceiling
+                u = np.array([1., self.env.dx_ceil(x_new)])  # Direction of ceiling
                 n = np.array([u[1], -1*u[0]])  # Normal of ceiling, going down
                 k = np.dot(k, u)*u - np.dot(k, n)*n  # Direction of reflected ray
 
                 # Calculate reflection coefficient
-                wavelength = c / self.__freq
+                wavelength = c / self.freq
                 angle = 1 / ((1 + (k[1]/k[0]) ** 2) ** 0.5)
                 refcoef = calc_refcoef_sediment(wavelength=wavelength, Zp0=calc_Z(z))  # use c from previous iteration
                 self.__rebounds.append({'step': i+1, 'coef': refcoef, 'surface': 'water-surface'})  # TODO
@@ -178,29 +179,29 @@ class Ray2D:
                 P_new = np.array([x_new, z_new])
 
             # Check simulation bounds
-            if x_new < self.__env.range_min[0]:
-                x_new = self.__env.range_min[0]
+            if x_new < self.env.range_min[0]:
+                x_new = self.env.range_min[0]
                 z_new = -1 * dx_z * (x_new - x) + z  # Only hit when going left (x_dir = -1)
                 self.XZ = np.insert(self.XZ, i+1, np.array([x_new, z_new]), axis=0)  # Add final point
                 if verbose: print('DEBUG: Out of bounds (x-axis min)')
                 self.stop_reason = 'exit-xmin'
                 break 
-            elif x_new > self.__env.range_max[0]:
-                x_new = self.__env.range_max[0]
+            elif x_new > self.env.range_max[0]:
+                x_new = self.env.range_max[0]
                 z_new = dx_z * (x_new - x) + z  # Only hit when going right (x_dir = 1)
                 self.XZ = np.insert(self.XZ, i+1, np.array([x_new, z_new]), axis=0)  # Add final point
                 if verbose: print('DEBUG: Out of bounds (x-axis max)')
                 self.stop_reason = 'exit-xmax'
                 break
-            elif z_new < self.__env.range_min[1]:
-                z_new = self.__env.range_min[1]
+            elif z_new < self.env.range_min[1]:
+                z_new = self.env.range_min[1]
                 x_new = x_dir * (z_new - z) / dx_z + x
                 self.XZ = np.insert(self.XZ, i+1, np.array([x_new, z_new]), axis=0)  # Add final point
                 if verbose: print('DEBUG: Out of bounds (z-axis min)')
                 self.stop_reason = 'exit-zmin'
                 break
-            elif z_new > self.__env.range_max[1]:
-                z_new = self.__env.range_max[1]
+            elif z_new > self.env.range_max[1]:
+                z_new = self.env.range_max[1]
                 x_new = x_dir * (z_new - z) / dx_z + x
                 self.XZ = np.insert(self.XZ, i+1, np.array([x_new, z_new]), axis=0)  # Add final point
                 if verbose: print('DEBUG: Out of bounds (z-axis max)')
@@ -250,7 +251,7 @@ class Ray2D:
         self.T = np.cumsum(np.insert(self.dT, 0, 0.))
 
         # Calculate cumulative absorption multiplier
-        dA_dB = calc_absorption_dB(self.__freq, self.XZ[:-1, 1]) / 1000 * self.dL  # dA_dB for each dL (decibels)
+        dA_dB = calc_absorption_dB(self.freq, self.XZ[:-1, 1]) / 1000 * self.dL  # dA_dB for each dL (decibels)
         A_dB = np.cumsum(np.insert(dA_dB, 0, 0.))  # cumulative absorption for each point (decibels)
         self.A = np.power(10, -1 * A_dB / 10)  # cumulative absorption for each point (coefficient)
         for rebound in self.__rebounds:
