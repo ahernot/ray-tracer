@@ -24,8 +24,9 @@ class Simulation2D:
         self.source = source
 
         self.rays = list()  # Raw list of rays (stored as references to Ray2D objects)
-        self.angles = dict()  # Dictionary of Ray2D objects grouped by angle
-        self.freqs = dict()  # Dictionary of Ray2D objects grouped by frequency
+        self.angles = dict()  # Dictionary of Ray2D objects indexed by angle
+        self.freqs = dict()  # Dictionary of Ray2D objects indexed by frequency
+        self.stop_reasons = dict()  # Dictionary of Ray2D objects indexed by stop reason
 
         self.n_rays = 0
         self.n_angles = 0
@@ -40,8 +41,9 @@ class Simulation2D:
         self.range_max = np.zeros(2)
         self.size = np.zeros(2)
 
-    def __repr__ (self):
-        return f'2D simulation containing {self.n_rays} rays'  # TODO: to improve later
+    def __repr__ (self):  # TODO: to improve later
+        stop_reasons_formatted = '\n'.join([f'\t{stop_reason}: {len(self.stop_reasons[stop_reason])}' for stop_reason in self.stop_reasons])
+        return f'2D simulation containing {self.n_rays} rays\nStop reasons:\n{stop_reasons_formatted}'
 
     def add_rays (self, freq, *angles, **kwargs):
         # Supports two rays for the same angle (for example two different frequencies)
@@ -56,6 +58,7 @@ class Simulation2D:
             self.rays .append(ray)
             self.angles[angle] = self.angles[angle] + [ray] if angle in self.angles else [ray]
             self.freqs[freq] = self.freqs[freq] + [ray] if freq in self.freqs else [ray]
+            self.stop_reasons[ray.stop_reason] = self.stop_reasons[ray.stop_reason] + [ray] if ray.stop_reason in self.stop_reasons else [ray]
 
             # Update simulation range
             if ray.range_min[0] < self.range_min[0]: self.range_min[0] = ray.range_min[0]
@@ -96,8 +99,6 @@ class Simulation2D:
 
         # Regenerate dictionary of spectral energy distribution per frequency (xf)
         self.__spectrum_distrib = {freq: self.spectrum(freq) / self.__spectrum_total for freq in self.freqs}
-
-
 
 
     def heatmap (self, **kwargs):
