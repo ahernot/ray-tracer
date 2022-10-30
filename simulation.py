@@ -10,7 +10,15 @@ from ray import Ray2D
 
 class Simulation2D:
 
-    def __init__ (self, env: Environment2D, source):
+    def __init__ (self, env: Environment2D, source, **kwargs):
+        """
+        :param env: Simulation environment
+        :param source: Source point
+
+        kwargs:
+        :param power: Combined source power
+        """
+        
         self.env = env
         self.source = source
         self.rays = list()  # Raw list of rays (stored as references to Ray2D objects)
@@ -19,6 +27,8 @@ class Simulation2D:
         self.n_rays = 0
         self.n_angles = 0
         # self.n_freqs = 0  # TODO
+
+        self.power = kwargs.get('power', 1.)
 
         self.range_min = np.zeros(2)
         self.range_max = np.zeros(2)
