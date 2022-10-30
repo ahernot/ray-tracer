@@ -16,21 +16,26 @@ class Simulation2D:
         :param source: Source point
 
         kwargs:
-        :param power: Combined source power
+        :param energy: Combined source power => divided first into the different frequencies (using self.spectrum), and then among rays
         :param spectrum: Power spectrum
         """
         
         self.env = env
         self.source = source
+
         self.rays = list()  # Raw list of rays (stored as references to Ray2D objects)
         self.angles = dict()  # Dictionary of Ray2D objects grouped by angle
-        # can group rays by frequency or some other key if needed
+        self.freqs = dict()  # Dictionary of Ray2D objects grouped by frequency
+
         self.n_rays = 0
         self.n_angles = 0
-        # self.n_freqs = 0  # TODO
+        self.n_freqs = 0
 
-        self.power = kwargs.get('power', 1.)
-        self.spectrum = kwargs.get('spectrum', lambda x: 1.)  # weights of the average for the frequencies
+        self.energy_total = kwargs.get('energy', 1.)
+        self.spectrum = kwargs.get('spectrum', lambda x: 1.)  # spectral power distribution (only the frequencies generated make up the ray power)
+        self.__spectrum_total = 0.  # Total of raw spectral values
+        self.__spectrum_vals = dict()  # Samples of self.spectrum non-normalised distribution function
+        self.__spectrum_distrib = dict()  # xf
 
         self.range_min = np.zeros(2)
         self.range_max = np.zeros(2)
@@ -43,6 +48,7 @@ class Simulation2D:
         # Supports two rays for the same angle (for example two different frequencies)
 
         for angle in angles:
+
             # Generate ray
             ray = Ray2D (self.env, self.source, freq, angle)
             ray.propagate(**kwargs)
@@ -50,6 +56,7 @@ class Simulation2D:
             # Add ray to simulation
             self.rays .append(ray)
             self.angles[angle] = self.angles[angle] + [ray] if angle in self.angles else [ray]
+            self.freqs[freq] = self.freqs[freq] + [ray] if freq in self.freqs else [ray]
 
             # Update simulation range
             if ray.range_min[0] < self.range_min[0]: self.range_min[0] = ray.range_min[0]
@@ -60,8 +67,40 @@ class Simulation2D:
         # Update simulation size
         self.size = self.range_max - self.range_min
 
+        # Redistribute spectral power (if new frequency added)
+        if len(self.freqs) > self.n_freqs:
+            self.__distribute_spectral_power()
+
+        # Update counters
         self.n_rays = len(self.rays)
         self.n_angles = len(self.angles)
+        self.n_freqs = len(self.freqs)
+
+        # Regenerate normalised ray energy unit
+        self.energy_norm = self.energy_total / np.sum([len(self.freqs[freq]) * self.__spectrum_distrib[freq] for freq in self.freqs])
+
+
+    def __distribute_spectral_power (self):
+        """
+        #
+        Run when adding a new frequency
+        """
+
+        # Add samples of self.spectrum non-normalised distribution function
+        for freq in self.freqs:
+            if freq not in self.__spectrum_vals:
+                self.__spectrum_vals [freq] = self.spectrum(freq)
+
+        # Regenerate total of raw spectral values
+        self.__spectrum_total = np.sum(list(self.__spectrum_vals.values()))
+
+        # Regenerate dictionary of 
+        for freq in self.freqs:
+            self.__spectrum_distrib [freq] = self.spectrum(freq) / self.__spectrum_total
+
+
+    def get_ray_power (self, freq):
+        return self.__spectrum_distrib[freq] * self.energy_norm
 
 
     def heatmap (self, **kwargs):
