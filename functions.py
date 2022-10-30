@@ -9,4 +9,3 @@ def coords_to_mask_2d (shape, coords, vals=True):
 
     mask_line[c_line_filtered] = vals
     return mask_line.reshape(shape[::-1]).T
-
