@@ -33,7 +33,6 @@ class Simulation2D:
 
         self.energy_total = kwargs.get('energy', 1.)
         self.spectrum = kwargs.get('spectrum', lambda x: 1.)  # spectral power distribution (only the frequencies generated make up the ray power)
-        self.__spectrum_total = 0.  # Total of raw spectral values
         self.__spectrum_vals = dict()  # Samples of self.spectrum non-normalised distribution function
         self.__spectrum_distrib = dict()  # xf
 
@@ -77,12 +76,13 @@ class Simulation2D:
         self.n_freqs = len(self.freqs)
 
         # Regenerate normalised ray energy unit
-        self.energy_norm = self.energy_total / np.sum([len(self.freqs[freq]) * self.__spectrum_distrib[freq] for freq in self.freqs])
+        self.__energy_norm = self.energy_total / np.sum([len(self.freqs[freq]) * self.__spectrum_distrib[freq] for freq in self.freqs])
+        self.ray_power = {freq: self.__spectrum_distrib[freq] * self.__energy_norm for freq in self.freqs}
 
 
     def __distribute_spectral_power (self):
         """
-        #
+        [desc]
         Run when adding a new frequency
         """
 
@@ -94,17 +94,15 @@ class Simulation2D:
         # Regenerate total of raw spectral values
         self.__spectrum_total = np.sum(list(self.__spectrum_vals.values()))
 
-        # Regenerate dictionary of 
-        for freq in self.freqs:
-            self.__spectrum_distrib [freq] = self.spectrum(freq) / self.__spectrum_total
+        # Regenerate dictionary of spectral energy distribution per frequency (xf)
+        self.__spectrum_distrib = {freq: self.spectrum(freq) / self.__spectrum_total for freq in self.freqs}
 
 
-    def get_ray_power (self, freq):
-        return self.__spectrum_distrib[freq] * self.energy_norm
 
 
     def heatmap (self, **kwargs):
         """
+        # TODO: redo this function
         Generate heatmap of ray power
         kwargs:
         :param res: Resolution (in meters)
