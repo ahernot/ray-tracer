@@ -1,10 +1,12 @@
 import numpy as np
+import matplotlib.pyplot as plt
+
 from scipy import interpolate
 
 
 class Environment2D:
 
-    def __init__ (self, floor=None, ceiling=None):
+    def __init__ (self, floor=None, ceiling=None, **kwargs):
         # self.__source = source
         # function to model ray speed as a function of x and z
         # current as additional displacement (vector field)
@@ -19,13 +21,23 @@ class Environment2D:
         self.floor = floor
         self.ceil = ceiling
 
-        res = 10000
-        mult = res / self.range_max[0]
-        x = np.linspace(self.range_min[0], self.range_max[0], res)
-        self.dx_floor = interpolate.interp1d(x, np.gradient(self.floor(x)) * mult, kind='quadratic')  # floor is static
-        self.dx_ceil = interpolate.interp1d(x, np.gradient(self.ceil(x)) * mult, kind='quadratic')  # ceiling is static
+        self.__res = kwargs.get('res', 10000)
+        mult = self.__res / self.range_max[0]
+
+        self.__x = np.linspace(self.range_min[0], self.range_max[0], self.__res)  # x resolution across environment
+        self.__floor_sampled = self.floor(self.__x)
+        self.__ceil_sampled = self.ceil(self.__x)
+
+        self.dx_floor = interpolate.interp1d(self.__x, np.gradient(self.__floor_sampled) * mult, kind='quadratic')  # floor is static
+        self.dx_ceil = interpolate.interp1d(self.__x, np.gradient(self.__ceil_sampled) * mult, kind='quadratic')  # ceiling is static
 
         # reflection power coefficient as a function of distance
+
+
+    def plot (self, fig, **kwargs):
+        plt.plot(self.__x, self.__ceil_sampled, figure=fig, **kwargs)
+        plt.plot(self.__x, self.__floor_sampled, figure=fig, **kwargs)
+
 
 
 # class EnvironmentStatic (Environment):
