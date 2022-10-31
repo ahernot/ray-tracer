@@ -16,6 +16,7 @@
 
 
 import numpy as np
+import matplotlib.pyplot as plt
 
 from scipy import interpolate
 from scipy.optimize import fsolve
@@ -71,6 +72,10 @@ class Ray2D:
 
     def __repr__ (self):
         return f'Ray of frequency {self.freq}'  # TODO: improve repr
+
+    def plot (self, fig):
+        if self.__is_propagated:
+            plt.plot(self.XZ[:,0], self.XZ[:,1], figure=fig)
 
     def propagate (self, res='high', **kwargs):
         """
