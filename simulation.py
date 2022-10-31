@@ -108,9 +108,11 @@ class Simulation2D:
         kwargs:
         :param res: Resolution (in meters) - # TODO? must be less precise than the simulation's max dz and dx
         :param n_reductions:
+        :param cutoff: Saturation percentage for normalised heatmap (pre-log scaling)
         """
         res = kwargs.get('resolution', np.array([50, 25]))
         n_reductions = kwargs.get('n_reductions', 10)
+        cutoff = kwargs.get('cutoff', 1.)
 
         # Initialise heatmap
         heatmap_shape = np.ceil(self.size/res).astype(int) [::-1]
@@ -130,16 +132,12 @@ class Simulation2D:
 
         # Normalise heatmap
         heatmap_norm = heatmap_full / np.max(heatmap_full)
+        heatmap_norm[heatmap_norm > cutoff] = cutoff
 
         # Reduce heatmap by applying successive log mappings
         heatmap_plot = heatmap_norm
         for i in range(n_reductions):
             heatmap_plot = np.log(heatmap_plot + 1.)
-
-        # TODO: plot ground (convex assumption)
-        # z_floor = self.env.floor(np.arange(0, xdim, 1) * res[0])
-        # z_width = np.arange(0, ydim, 1) * -1 * res[1]
-        # floor_mask = (np.tile(z_width, (xdim, 1)).T < z_floor).T
 
         return heatmap_plot
 
