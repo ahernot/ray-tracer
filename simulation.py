@@ -3,10 +3,11 @@
 
 import numpy as np
 
+from functions import coords_to_mask_2d
 from environment import Environment2D
 from ray import Ray2D
 
-# TODO: simulation to rename source, to include inside of a simulation
+
 
 class Simulation2D:
 
@@ -80,7 +81,7 @@ class Simulation2D:
 
         # Regenerate normalised ray energy unit
         self.__energy_norm = self.energy_total / np.sum([len(self.freqs[freq]) * self.__spectrum_distrib[freq] for freq in self.freqs])
-        self.ray_power = {freq: self.__spectrum_distrib[freq] * self.__energy_norm for freq in self.freqs}
+        self.ray_energy = {freq: self.__spectrum_distrib[freq] * self.__energy_norm for freq in self.freqs}
 
 
     def __distribute_spectral_power (self):
@@ -103,39 +104,37 @@ class Simulation2D:
 
     def heatmap (self, **kwargs):
         """
-        # TODO: redo this function
         Generate heatmap of ray power
         kwargs:
-        :param res: Resolution (in meters)
-        :param cutoff:
+        :param res: Resolution (in meters) - # TODO? must be less precise than the simulation's max dz and dx
+        :param n_reductions:
         """
         res = kwargs.get('resolution', np.array([50, 25]))
-        cutoff = kwargs.get('cutoff', 150)
+        n_reductions = kwargs.get('n_reductions', 10)
 
         # Initialise heatmap
-        xdim, ydim = heatmap_shape = np.ceil(self.size/res).astype(int)
-        heatmap_full = np.zeros(heatmap_shape)
+        heatmap_shape = np.ceil(self.size/res).astype(int) [::-1]
+        heatmap_full = np.zeros((heatmap_shape))
 
-        # Trace rays
         for ray in self.rays:
+
+            # Generate reduced mask
             rx = ray.XZ.copy().astype(int)
+            rx[:, 0] //= res[0]
+            rx[:, 1] //= -1 * res[1]
 
-            # Homonegeneise bounds
-            rx = np.insert(rx, 0, self.range_min, axis=0)
-            rx = np.insert(rx, 0, self.range_max, axis=0)
+            # Plot ray heatmap according to ray energy
+            a = ray.A_dB.copy()
+            heatmap_ray = coords_to_mask_2d(heatmap_shape, rx, a) * self.ray_energy[ray.freq]
+            heatmap_full += heatmap_ray
 
-            # Downsample
-            x = rx[:, 0] // res[0]
-            y = rx[:, 1] // -1 * res[1]
-
-            # Add ray's 2D histogram
-            heatmap, xedges, yedges = np.histogram2d(x, y, bins=heatmap_shape)
-            heatmap_full += heatmap
-
-        # Process heatmap
-        heatmap_full[heatmap_full > cutoff] = cutoff
+        # Normalise heatmap
         heatmap_norm = heatmap_full / np.max(heatmap_full)
-        heatmap_plot = np.log(heatmap_norm + 1.)
+
+        # Reduce heatmap by applying successive log mappings
+        heatmap_plot = heatmap_norm
+        for i in range(n_reductions):
+            heatmap_plot = np.log(heatmap_plot + 1.)
 
         # TODO: plot ground (convex assumption)
         # z_floor = self.env.floor(np.arange(0, xdim, 1) * res[0])
