@@ -11,6 +11,7 @@
 # TODO: add actual reflection coefficient calculations (instead of the placeholder 0.5)
 # TODO: add an absorption_max criteria (either in mult or in dB)
 # TODO: make class attributes such as freq etc. public
+# TODO: simulation to rename source, to include inside of a simulation => no, adds extra layer of complexity for nothing (for now)
 
 
 
