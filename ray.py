@@ -148,7 +148,7 @@ class Ray2D:
                 wavelength = c / self.freq
                 angle = 1 / ((1 + (k[1]/k[0]) ** 2) ** 0.5)
                 refcoef = calc_refcoef_surface(wavelength=wavelength, angle=angle)
-                self.__rebounds.append({'step': i+1, 'coef': refcoef, 'surface': 'ground'}) # TODO
+                self.__rebounds.append({'step': i+1, 'gain_dB': 10 * np.log10(refcoef), 'surface': 'ground'})
                 self.n_rebounds += 1
                 
                 if self.n_rebounds_max > -1 and self.n_rebounds > self.n_rebounds_max:
@@ -170,8 +170,8 @@ class Ray2D:
                 # Calculate reflection coefficient
                 wavelength = c / self.freq
                 angle = 1 / ((1 + (k[1]/k[0]) ** 2) ** 0.5)
-                refcoef = calc_refcoef_sediment(wavelength=wavelength, Zp0=calc_Z(z))  # use c from previous iteration
-                self.__rebounds.append({'step': i+1, 'coef': refcoef, 'surface': 'water-surface'})  # TODO
+                refcoef = calc_refcoef_sediment(wavelength=wavelength, Zp0=calc_Z(z))  # Uses c from previous iteration
+                self.__rebounds.append({'step': i+1, 'gain_dB': 10 * np.log10(refcoef), 'surface': 'water-surface'})
                 self.n_rebounds += 1
 
                 if self.n_rebounds_max > -1 and self.n_rebounds > self.n_rebounds_max:
@@ -257,15 +257,13 @@ class Ray2D:
         self.T = np.cumsum(np.insert(self.dT, 0, 0.))
 
         # Calculate cumulative absorption multiplier
-        dA_dB = calc_absorption_dB(self.freq, self.XZ[:-1, 1]) / 1000 * self.dL  # dA_dB for each dL (decibels)
-        A_dB = np.cumsum(np.insert(dA_dB, 0, 0.))  # cumulative absorption for each point (decibels)
-        self.A = np.power(10, -1 * A_dB / 10)  # cumulative absorption for each point (coefficient)
+        dG_dB = -1 * calc_absorption_dB(self.freq, self.XZ[:-1, 1]) / 1000 * self.dL  # dG_dB for each dL (decibels)
+        self.G_dB = np.cumsum(np.insert(dG_dB, 0, 0.))  # Cumulative gain for each point (decibels)
         for rebound in self.__rebounds:
-            A_mult = np.ones((self.steps), dtype=float)
-            A_mult[rebound['step']+1:] *= rebound['coef']
-            self.A *= A_mult  # TODO: apply reflection absorption in dB (cf. paper) to self.A_dB and then convert to self.A
-        self.A_dB = -10 * np.log10(self.A)
-
+            G_dB_add = np.zeros(self.steps, dtype=float)
+            G_dB_add[rebound['step']+1:] = rebound['gain_dB']
+            self.G_dB += G_dB_add
+        self.Tmult = np.power(10, self.G_dB / 10)  # Cumulative transmittance multiplier for each point
 
         # Generate interpolated path function
         self.calc_z = interpolate.interp1d(self.XZ[:, 0], self.XZ[:, 1], kind='linear')
