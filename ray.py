@@ -13,6 +13,8 @@
 # TODO: make class attributes such as freq etc. public
 # TODO: simulation to rename source, to include inside of a simulation => no, adds extra layer of complexity for nothing (for now)
 
+# http://www.sengpielaudio.com/calculator-FactorRatioLevelDecibel.htm
+
 
 
 import numpy as np
