@@ -2,6 +2,7 @@
 # Copyright Anatole Hernot (Mines Paris), 2022. All rights reserved.
 
 import numpy as np
+import matplotlib.pyplot as plt
 
 from functions import coords_to_mask_2d
 from environment import Environment2D
@@ -141,10 +142,11 @@ class Simulation2D:
 
         return heatmap_plot
 
-    def plot (self):
-        # Plot environment (floor & ceiling for now)
-        # Plot rays (or selection of rays)
-        pass
+    def plot (self, fig):
+
+        for ray in self.rays:
+            ray.plot(fig)
+        self.env.plot(fig, c='red')
 
     def save (self):
         # save as a file
