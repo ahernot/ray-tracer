@@ -127,8 +127,10 @@ class Simulation2D:
             rx[:, 1] //= -1 * res[1]
 
             # Plot ray heatmap according to ray energy
-            a = ray.A_dB.copy()
-            heatmap_ray = coords_to_mask_2d(heatmap_shape, rx, a) * self.ray_energy[ray.freq]
+            a = ray.G_dB.copy()
+            heatmap_ray = coords_to_mask_2d(heatmap_shape, rx, a - np.min(a)) * self.ray_energy[ray.freq]
+            # a = ray.Tmult.copy()
+            # heatmap_ray = coords_to_mask_2d(heatmap_shape, rx, np.log10(a + 1.)) * self.ray_energy[ray.freq]
             heatmap_full += heatmap_ray
 
         # Normalise heatmap
