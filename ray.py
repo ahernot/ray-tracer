@@ -240,9 +240,9 @@ class Ray2D:
                 break
             
             # Check number of steps (verbose only)
-            if verbose and i == self.n_steps_max - 1:
+            if i == self.n_steps_max - 1:
+                if verbose: print(f'DEBUG: Maximum iterations reached ({self.n_steps_max})')
                 self.stop_reason = 'max-iter'
-                print(f'DEBUG: Maximum iterations reached ({self.n_steps_max})')
 
         # Count simulation steps
         self.steps = self.XZ.shape[0]
