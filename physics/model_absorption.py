@@ -4,7 +4,7 @@
 import numpy as np
 
 # Sound absorption in seawater
-def calc_absorption_dB (f: float, z: float, T: float, S: float, pH: float):
+def calc_absorption_dB (f: float, z: float, T: float, S: float, pH: float):  # TODO: rename calc_dz_dG
     """
     Ainslie and McColm 1998
     :param f: Signal frequency (in Hz)
