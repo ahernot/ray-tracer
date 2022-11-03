@@ -112,8 +112,8 @@ class Simulation2D:
         :param cutoff: Saturation percentage for normalised heatmap (pre-log scaling)
         """
         res = kwargs.get('resolution', np.array([50, 25]))
-        n_reductions = kwargs.get('n_reductions', 10)
-        cutoff = kwargs.get('cutoff', 1.)
+        reduction_power = kwargs.get('reduction_power', .5)
+        cutoff = kwargs.get('cutoff', .02)
 
         # Initialise heatmap
         heatmap_shape = np.ceil(self.size/res).astype(int) [::-1]
@@ -127,22 +127,17 @@ class Simulation2D:
             rx[:, 1] //= -1 * res[1]
 
             # Plot ray heatmap according to ray energy
-            a = ray.G_dB.copy()
-            heatmap_ray = coords_to_mask_2d(heatmap_shape, rx, a - np.min(a)) * self.ray_energy[ray.freq]
-            # a = ray.Tmult.copy()
-            # heatmap_ray = coords_to_mask_2d(heatmap_shape, rx, np.log10(a + 1.)) * self.ray_energy[ray.freq]
+            vals = np.power(ray.Tmult, -0.1)
+            heatmap_ray = coords_to_mask_2d(heatmap_shape, rx, vals) * self.ray_energy[ray.freq]
             heatmap_full += heatmap_ray
 
         # Normalise heatmap
         heatmap_norm = heatmap_full / np.max(heatmap_full)
         heatmap_norm[heatmap_norm > cutoff] = cutoff
-
-        # Reduce heatmap by applying successive log mappings
-        heatmap_plot = heatmap_norm
-        for i in range(n_reductions):
-            heatmap_plot = np.log(heatmap_plot + 1.)
+        heatmap_plot = np.power(heatmap_norm, reduction_power) if reduction_power != 1 else heatmap_norm
 
         return heatmap_plot
+
 
     def plot (self, fig):
 
@@ -150,9 +145,11 @@ class Simulation2D:
             ray.plot(fig)
         self.env.plot(fig, c='red')
 
+
     def save (self):
         # save as a file
         pass
+
 
     def extract (self):
         # Return new Simulation with only the selected rays
