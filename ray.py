@@ -1,17 +1,12 @@
-# 2D Ray Propagation Model (v3.0)
+# 2D Ray Propagation Model (v3.1)
 # Copyright Anatole Hernot (Mines Paris), 2022. All rights reserved.
 
-# TODO New version: each ray is subdivided into segments and with each rebound new subclasses are created as a tree (can have multiple branches per rebound)
 # TODO: generalise as calc_c(x, z) and derive using numpy => use matrices for calculations (set resolution) / use 2D functions for calculations
 # TODO: Add min and max values into self. for when using interpolated function, generated at the same time as the latter
 # TODO: increase pace when far enough away from borders
 # TODO: add a verbose_indent kwargs field to indent verbose when called from Simulation2D with verbose enabled
 # TODO: pregenerate lower-res functions such as calc_absorption in fixed-size arrays to approximate the values if res=low selected
-# TODO: optimise the np.insert() function to make it inplace (?)
-# TODO: add actual reflection coefficient calculations (instead of the placeholder 0.5)
 # TODO: add an absorption_max criteria (either in mult or in dB)
-# TODO: make class attributes such as freq etc. public
-# TODO: simulation to rename source, to include inside of a simulation => no, adds extra layer of complexity for nothing (for now)
 
 # http://www.sengpielaudio.com/calculator-FactorRatioLevelDecibel.htm
 
@@ -79,7 +74,7 @@ class Ray2D:
         if self.__is_propagated:
             plt.plot(self.XZ[:,0], self.XZ[:,1], figure=fig)
 
-    def propagate (self, res='high', **kwargs):
+    def propagate (self, **kwargs):
         """
         Propagate ray
 
@@ -258,7 +253,7 @@ class Ray2D:
         self.dT = self.dL / self.C[:-1]  # dT at each arrival point (excluding initial point)
         self.T = np.cumsum(np.insert(self.dT, 0, 0.))
 
-        # Calculate cumulative absorption multiplier
+        # Calculate gain
         dG_dB = -1 * calc_absorption_dB(self.freq, self.XZ[:-1, 1]) / 1000 * self.dL  # dG_dB for each dL (decibels)
         self.G_dB = np.cumsum(np.insert(dG_dB, 0, 0.))  # Cumulative gain for each point (decibels)
         for rebound in self.__rebounds:
