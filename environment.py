@@ -24,7 +24,7 @@ class Environment2D:
         self.__res = kwargs.get('res', 10000)
         mult = self.__res / self.range_max[0]
 
-        self.__x = np.linspace(self.range_min[0], self.range_max[0], self.__res)  # x resolution across environment
+        self.__x = np.linspace(self.range_min[0], self.range_max[0], self.__res)  # x resolution across environment  # TODO: use PhysicsEnvironment2D.x
         self.__floor_sampled = self.floor(self.__x)
         self.__ceil_sampled = self.ceil(self.__x)
 
