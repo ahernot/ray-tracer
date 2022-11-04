@@ -1,12 +1,14 @@
-# 2D Ray Simulation (v1.0)
+# 2D Ray Simulation (v1.1)
 # Copyright Anatole Hernot (Mines Paris), 2022. All rights reserved.
 
 # TODO: Preset with self.env.range_{min/max} instead of extending for each ray? But range is useful for plotting too… so maybe add plot_range_{min/max}?
 
 import numpy as np
-import matplotlib.pyplot as plt
+# import matplotlib.pyplot as plt
 
+# from preferences import *
 from functions import coords_to_mask_2d
+
 from environment import Environment2D
 from ray import Ray2D
 
@@ -19,7 +21,7 @@ class Simulation2D:
         :param env: Simulation environment
         :param source: Source point
 
-        kwargs:
+        kwargs
         :param energy: Combined source power => divided first into the different frequencies (using self.spectrum), and then among rays
         :param spectrum: Power spectrum
         """
@@ -108,7 +110,7 @@ class Simulation2D:
     def heatmap (self, **kwargs):
         """
         Generate heatmap of ray power
-        kwargs:
+        kwargs
         :param res: Resolution (in meters) - # TODO? must be less precise than the simulation's max dz and dx
         :param n_reductions:
         :param cutoff: Saturation percentage for normalised heatmap (pre-log scaling)
