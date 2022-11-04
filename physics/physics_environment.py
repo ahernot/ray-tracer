@@ -1,7 +1,6 @@
 # 2D Physics Environment (v1.0)
 # Copyright Anatole Hernot (Mines Paris), 2022. All rights reserved.
 
-# TODO: store cartesian product with coordinates for each sampled point (useful?)
 
 
 import numpy as np
@@ -47,12 +46,12 @@ class PhysicsEnvironment2D:
         self.__calc_rho = physics.model_rho.calc_rho
         self.__calc_dz_dG_coefs = physics.model_absorption.calc_dz_dG_coefs
 
-        # self.res_x = kwargs.get('res_x', 0)  # Default is x-invariant  # TODO: set default values
+        self.res_x = kwargs.get('res_x', 0)  # Default is x-invariant  # TODO: set default values
         self.res_z = kwargs.get('res_z', 10)  # TODO: set default values
         self.range_min = range_min
         self.range_max = range_max
 
-        # self.x = np.arange(self.range_min[0], self.range_max[0], self.res_x) if self.res_x != 0 else np.array([X_DEFAULT])  # Check if x-invariant
+        self.x = np.arange(self.range_min[0], self.range_max[0], self.res_x) if self.res_x != 0 else np.array([X_DEFAULT])  # Check if x-invariant
         self.z = np.arange(self.range_min[1], self.range_max[1], self.res_z) if self.res_z != 0 else np.array([Z_DEFAULT])  # Check if z-invariant
 
 
@@ -79,16 +78,3 @@ class PhysicsEnvironment2D:
         self.__dz_dG_coefs = self.__calc_dz_dG_coefs(self.z, self.T, self.S, self.pH)
         self.__calc_dz_dG_coefs_interp = interpolate.interp1d(self.z, self.__dz_dG_coefs, kind='quadratic')
         self.calc_dz_dG = lambda f, z: self.__calc_dz_dG(f, z, self.__calc_dz_dG_coefs_interp)
-        
-        
-
-
-    def extend (self, range_min, range_max):
-        # Extend environment (shouldn't need to be used)
-
-        # extend params
-
-        # extend v, rho, absorption
-
-        # re-interpolate
-        pass
