@@ -249,13 +249,13 @@ class Ray2D:
         self.T = np.cumsum(np.insert(self.dT, 0, 0.))
 
         # Calculate gain
-        dG_dB = -1 * calc_absorption_dB(self.freq, self.XZ[:-1, 1]) / 1000 * self.dL  # dG_dB for each dL (decibels)
-        self.G_dB = np.cumsum(np.insert(dG_dB, 0, 0.))  # Cumulative gain for each point (decibels)
+        dG = -1 * self.env.penv.calc_dz_dG(self.freq, self.XZ[:-1, 1]) / 1000 * self.dL  # dG_dB for each dL (decibels)
+        self.G = np.cumsum(np.insert(dG, 0, 0.))  # Cumulative gain for each point (decibels)
         for rebound in self.__rebounds:
-            G_dB_add = np.zeros(self.steps, dtype=float)
-            G_dB_add[rebound['step']+1:] = rebound['gain_dB']
-            self.G_dB += G_dB_add
-        self.Tmult = np.power(10, self.G_dB / 10)  # Cumulative transmittance multiplier for each point
+            G_add = np.zeros(self.steps, dtype=float)
+            G_add[rebound['step']+1:] = rebound['gain_dB']
+            self.G += G_add
+        self.Tmult = np.power(10, self.G / 10)  # Cumulative transmittance multiplier for each point
 
         # Generate interpolated path function
         self.calc_z = interpolate.interp1d(self.XZ[:, 0], self.XZ[:, 1], kind='linear')
