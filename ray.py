@@ -23,7 +23,6 @@ from preferences import *
 import physics
 from physics.model_impedance import calc_Z
 from physics.model_reflection import calc_refcoef_surface, calc_refcoef_sediment
-from physics.profile_velocity import calc_c, calc_dz_c
 from physics.profile_absorption import calc_absorption_dB
 from environment import Environment2D
 
@@ -100,10 +99,6 @@ class Ray2D:
         self.n_rebounds = 0
         self.__rebounds = list()
 
-        # Ray speed functions (x-invariant)
-        calc_c = kwargs.get('calc_c', physics.profile_velocity.calc_c)  # Ray speed function (x-invariant)
-        calc_dz_c = kwargs.get('calc_dz_c', physics.profile_velocity.calc_dz_c)  # Ray speed z-derivative function (x-invariant)
-
         # Minimum resolutions
         self.dx_max = kwargs.get('dx_max', DX_MAX_DEFAULT)
         self.dz_max = kwargs.get('dz_max', DZ_MAX_DEFAULT)
@@ -118,7 +113,7 @@ class Ray2D:
         x_dir = 1.  # forwards propagation
         k = np.array([x_dir, dx_z])
         # Initialise solver
-        c = calc_c(0)
+        c = self.env.penv.calc_c(0)
         mult = -1 * np.power(c / np.sin(angle), 2)  # differential equation multiplier
 
 
@@ -217,8 +212,8 @@ class Ray2D:
             P = P_new.copy()
 
             # Calculate new point's properties
-            c = calc_c (z_new)
-            dz_c = calc_dz_c (z_new)
+            c = self.env.penv.calc_c (z_new)
+            dz_c = self.env.penv.calc_dz_c (z_new)
             # Unpack k
             x_dir = np.sign(k[0])
             dx_z = k[1] / k[0]
@@ -249,7 +244,7 @@ class Ray2D:
         # Calculate integration segments
         self.dL = np.linalg.norm(np.diff(self.XZ, axis=0), axis=1)  # dL at each arrival point (excluding initial point)
         self.L = np.cumsum(np.insert(self.dL, 0, 0.))
-        self.C = calc_c(self.XZ[:, 1])  # velocity at each point
+        self.C = self.env.penv.calc_c(self.XZ[:, 1])  # velocity at each point
         self.dT = self.dL / self.C[:-1]  # dT at each arrival point (excluding initial point)
         self.T = np.cumsum(np.insert(self.dT, 0, 0.))
 

@@ -8,18 +8,20 @@ import numpy as np
 def calc_dz_dG_coefs (z, T, S, pH):
         f1 = 0.78 * np.sqrt(S / 35) * np.exp(T / 26)  # Boric acid relaxation frequency (kHz)
         f2 = 42 * np.exp(T / 17)  # Magnesium sulfate relaxation frequency (kHz)
-        A1 = 0.106
         A2 = 0.52 * (1 + T / 43) * (S / 35)
-        A3 = 0.00049
         E1 = np.exp((pH - 8) / 0.56)
         E2 = np.exp(z / 6000)
         E3 = np.exp(z / 17000 - T / 27)
-        return f1, f2, A1, A2, A3, E1, E2, E3
+        params = np.stack((f1, f2, A2, E1, E2, E3))  # interpolate along axis 1 for shape (6, N)
+        return params
 
 
 def calc_dz_dG (f: float, z: float, calc_dz_dG_coefs_interp):
-    f1, f2, A1, A2, A3, E1, E2, E3 = calc_dz_dG_coefs_interp(z)
+    f1, f2, A2, E1, E2, E3 = calc_dz_dG_coefs_interp(z)
     f /= 1000   # to get f in kHz for the formula
+
+    A1 = 0.106
+    A3 = 0.00049
 
     alpha_1 = A1 * (f1 * np.power(f, 2)) / (np.power(f1, 2) + np.power(f, 2))  # Boric acid (relaxation absorption)
     alpha_2 = A2 * (f2 * np.power(f, 2)) / (np.power(f2, 2) + np.power(f, 2))  # Magnesium sulfate (relaxation absorption)

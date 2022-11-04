@@ -51,8 +51,8 @@ class PhysicsEnvironment2D:
         self.range_min = range_min
         self.range_max = range_max
 
-        self.x = np.arange(self.range_min[0], self.range_max[0], self.res_x) if self.res_x != 0 else np.array([X_DEFAULT])  # Check if x-invariant
-        self.z = np.arange(self.range_min[1], self.range_max[1], self.res_z) if self.res_z != 0 else np.array([Z_DEFAULT])  # Check if z-invariant
+        self.x = np.arange(self.range_min[0], self.range_max[0] + self.res_z, self.res_x) if self.res_x != 0 else np.array([X_DEFAULT])  # Check if x-invariant
+        self.z = np.arange(self.range_min[1], self.range_max[1] + self.res_z, self.res_z) if self.res_z != 0 else np.array([Z_DEFAULT])  # Check if z-invariant
 
 
     def generate (self):
@@ -75,5 +75,5 @@ class PhysicsEnvironment2D:
 
         # Absorption (keep full frequency resolution, interpolate spatially)
         self.__dz_dG_coefs = self.__calc_dz_dG_coefs(self.z, self.T, self.S, self.pH)
-        self.__calc_dz_dG_coefs_interp = interpolate.interp1d(self.z, self.__dz_dG_coefs, kind='quadratic')
+        self.__calc_dz_dG_coefs_interp = interpolate.interp1d(self.z, self.__dz_dG_coefs, axis=1, kind='quadratic')
         self.calc_dz_dG = lambda f, z: self.__calc_dz_dG(f, z, self.__calc_dz_dG_coefs_interp)
