@@ -1,6 +1,9 @@
 # 2D Physics Environment (v1.1)
 # Copyright Anatole Hernot (Mines Paris), 2022. All rights reserved.
 
+# TODO: add a lowres setting into Environment2D
+# TODO: quadratic or linear interpolation?
+
 
 import numpy as np
 from scipy import interpolate
@@ -33,7 +36,7 @@ class PhysicsEnvironment2D:
         :param range_min:
         :param range_max:
 
-        kwargs:
+        kwargs
         :param res_x: horizontal resolution (in meters)
         :param res_z: vertical resolution (in meters)
         """
