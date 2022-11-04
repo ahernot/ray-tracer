@@ -1,6 +1,8 @@
 # 2D Ray Simulation (v1.0)
 # Copyright Anatole Hernot (Mines Paris), 2022. All rights reserved.
 
+# TODO: Preset with self.env.range_{min/max} instead of extending for each ray? But range is useful for plotting too… so maybe add plot_range_{min/max}?
+
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -39,8 +41,8 @@ class Simulation2D:
         self.__spectrum_vals = dict()  # Samples of self.spectrum non-normalised distribution function
         self.__spectrum_distrib = dict()  # xf
 
-        self.range_min = np.zeros(2)
-        self.range_max = np.zeros(2)
+        self.range_min = np.zeros(2)  # maximum extent is self.env.range_min
+        self.range_max = np.zeros(2)  # maximum extent is self.env.range_min
         self.size = np.zeros(2)
 
     def __repr__ (self):  # TODO: to improve later
