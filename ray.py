@@ -1,11 +1,8 @@
 # 2D Ray Propagation Model (v3.1)
 # Copyright Anatole Hernot (Mines Paris), 2022. All rights reserved.
 
-# TODO: generalise as calc_c(x, z) and derive using numpy => use matrices for calculations (set resolution) / use 2D functions for calculations
-# TODO: Add min and max values into self. for when using interpolated function, generated at the same time as the latter
 # TODO: increase pace when far enough away from borders
 # TODO: add a verbose_indent kwargs field to indent verbose when called from Simulation2D with verbose enabled
-# TODO: pregenerate lower-res functions such as calc_absorption in fixed-size arrays to approximate the values if res=low selected
 # TODO: add an absorption_max criteria (either in mult or in dB)
 
 # http://www.sengpielaudio.com/calculator-FactorRatioLevelDecibel.htm
@@ -17,7 +14,6 @@ import matplotlib.pyplot as plt
 
 from scipy import interpolate
 from scipy.optimize import fsolve
-from scipy.misc import derivative
 
 from preferences import *
 from physics.model_reflection import calc_refcoef_surface, calc_refcoef_sediment
@@ -35,15 +31,7 @@ class Ray2D:
         :param env: Simulation environment
         :param source: Source point
         :param angle: Casting angle (from horizontal), in radians
-
-        kwargs
-        :param calc_der: Derivative calculation function
-        :param func_solve: Equation solver
         """
-
-        # Solver functions
-        self.calc_der = kwargs.get('calc_der', derivative)
-        self.func_solve = kwargs.get('func_solve', fsolve)
 
         self.__is_propagated = False
 
@@ -126,7 +114,7 @@ class Ray2D:
 
             # Check floor rebounds
             if self.env.floor and z_new < self.env.floor(x_new):  # Calculate intersection point and new direction vector
-                x_new = float( self.func_solve( lambda x1: self.env.floor(x) - dx_z * (x1 - x) - z, x0=x ))
+                x_new = float( fsolve( lambda x1: self.env.floor(x) - dx_z * (x1 - x) - z, x0=x ))
                 z_new = self.env.floor(x_new)
                 P_new = np.array([x_new, z_new])
                 u = np.array([1., self.env.dx_floor(x_new)])  # Direction of floor
@@ -149,7 +137,7 @@ class Ray2D:
 
             # Check ceiling rebounds
             elif self.env.ceil and z_new > self.env.ceil(x_new):
-                x_new = float( self.func_solve( lambda x1: self.env.ceil(x) - dx_z * (x1 - x) - z, x0=x ))
+                x_new = float( fsolve( lambda x1: self.env.ceil(x) - dx_z * (x1 - x) - z, x0=x ))
                 z_new = self.env.ceil(x_new)
                 P_new = np.array([x_new, z_new])
                 u = np.array([1., self.env.dx_ceil(x_new)])  # Direction of ceiling
