@@ -1,10 +1,11 @@
-# 2D Physics Environment (v1.0)
+# 2D Physics Environment (v1.1)
 # Copyright Anatole Hernot (Mines Paris), 2022. All rights reserved.
-
 
 
 import numpy as np
 from scipy import interpolate
+
+from preferences import *
 
 import physics
 from physics.profile_salinity import calc_S
@@ -22,6 +23,7 @@ X_DEFAULT = 0.
 Z_DEFAULT = 0.
 
 
+
 class PhysicsEnvironment2D:
 
     def __init__ (self, range_min, range_max, **kwargs):
@@ -37,8 +39,8 @@ class PhysicsEnvironment2D:
         """
         # ! UNIDIRECTIONIAL FOR NOW (functions of z as only spatial dimension)
 
-        self.res_x = kwargs.get('res_x', 0)  # Default is x-invariant  # TODO: set default values
-        self.res_z = kwargs.get('res_z', 10)  # TODO: set default values
+        self.res_x = kwargs.get('res_x', RES_X_DEFAULT)  # Default is x-invariant  # TODO: set default values
+        self.res_z = kwargs.get('res_z', RES_Z_DEFAULT)  # TODO: set default values
         self.range_min = range_min
         self.range_max = range_max
 
