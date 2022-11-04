@@ -20,10 +20,7 @@ from scipy.optimize import fsolve
 from scipy.misc import derivative
 
 from preferences import *
-import physics
-from physics.model_impedance import calc_Z
 from physics.model_reflection import calc_refcoef_surface, calc_refcoef_sediment
-from physics.profile_absorption import calc_absorption_dB
 from environment import Environment2D
 
 
@@ -162,7 +159,7 @@ class Ray2D:
                 # Calculate reflection coefficient
                 wavelength = c / self.freq
                 angle = 1 / ((1 + (k[1]/k[0]) ** 2) ** 0.5)
-                refcoef = calc_refcoef_sediment(wavelength=wavelength, Zp0=calc_Z(z))  # Uses c from previous iteration
+                refcoef = calc_refcoef_sediment(wavelength=wavelength, Zp0=self.env.penv.calc_Z(z))  # Uses c from previous iteration
                 self.__rebounds.append({'step': i+1, 'gain_dB': 10 * np.log10(refcoef), 'surface': 'water-surface'})
                 self.n_rebounds += 1
 
