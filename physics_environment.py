@@ -55,7 +55,7 @@ class PhysicsEnvironment2D:
         self.z = np.arange(self.range_min[1], self.range_max[1], self.res_z) if self.res_z != 0 else np.array([Z_DEFAULT])  # Check if z-invariant
 
 
-    def generate_params (self):
+    def generate (self):
 
         # Already interpolated (and interpolations not needed)
         self.S = self.__calc_S(self.z)
