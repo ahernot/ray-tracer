@@ -24,7 +24,7 @@ class Environment2D:
         :param floor:
         :param ceiling:
         
-        kwargs:
+        kwargs
         :param res_x:
         :param res_z:
         """
