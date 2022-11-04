@@ -44,6 +44,7 @@ class PhysicsEnvironment2D:
         self.__calc_c = physics.model_velocity.sound_velocity_medwin
         self.__calc_rho = physics.model_rho.calc_rho
         self.__calc_dz_dG_coefs = physics.model_absorption.calc_dz_dG_coefs
+        self.__calc_dz_dG = physics.model_absorption.calc_dz_dG
 
         self.res_x = kwargs.get('res_x', 0)  # Default is x-invariant  # TODO: set default values
         self.res_z = kwargs.get('res_z', 10)  # TODO: set default values
@@ -65,7 +66,7 @@ class PhysicsEnvironment2D:
         # Velocity
         self.c = self.__calc_c (self.z, self.S, self.T)
         self.calc_c = interpolate.interp1d(self.z, self.c, kind='quadratic')
-        self.dz_c = np.gradient(self.c)
+        self.dz_c = np.gradient(self.c) / self.res_z
         self.calc_dz_c = interpolate.interp1d(self.z, self.dz_c, kind='quadratic')
 
         # Rho
