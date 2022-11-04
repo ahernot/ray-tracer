@@ -37,15 +37,6 @@ class PhysicsEnvironment2D:
         """
         # ! UNIDIRECTIONIAL FOR NOW (functions of z as only spatial dimension)
 
-        self.__calc_S = physics.profile_salinity.calc_S  # Salinity as a function of z  # TODO: x, z
-        self.__calc_T = physics.profile_temperature.calc_T  # Temperature as a function of z  # TODO: x, z
-        self.__calc_P = physics.profile_pressure.calc_P  # Pressure as a function of z  # TODO: x, z
-        self.__calc_pH = physics.profile_ph.calc_pH  # pH as a function of z  # TODO: x, z
-        self.__calc_c = physics.model_velocity.sound_velocity_medwin
-        self.__calc_rho = physics.model_rho.calc_rho
-        self.__calc_dz_dG_coefs = physics.model_absorption.calc_dz_dG_coefs
-        self.__calc_dz_dG = physics.model_absorption.calc_dz_dG
-
         self.res_x = kwargs.get('res_x', 0)  # Default is x-invariant  # TODO: set default values
         self.res_z = kwargs.get('res_z', 10)  # TODO: set default values
         self.range_min = range_min
@@ -58,22 +49,26 @@ class PhysicsEnvironment2D:
     def generate (self):
 
         # Already interpolated (and interpolations not needed)
-        self.S = self.__calc_S(self.z)
-        self.T = self.__calc_T(self.z)
-        self.P = self.__calc_P(self.z)
-        self.pH = self.__calc_pH(self.z)
+        self.S = physics.profile_salinity.calc_S (self.z)
+        self.T = physics.profile_temperature.calc_T (self.z)
+        self.P = physics.profile_pressure.calc_P (self.z)
+        self.pH = physics.profile_ph.calc_pH (self.z)
 
         # Velocity
-        self.c = self.__calc_c (self.z, self.S, self.T)
-        self.calc_c = interpolate.interp1d(self.z, self.c, kind='quadratic')
+        self.c = physics.model_velocity.sound_velocity_medwin (self.z, self.S, self.T)
+        self.calc_c = interpolate.interp1d (self.z, self.c, kind='quadratic')
         self.dz_c = np.gradient(self.c) / self.res_z
-        self.calc_dz_c = interpolate.interp1d(self.z, self.dz_c, kind='quadratic')
+        self.calc_dz_c = interpolate.interp1d (self.z, self.dz_c, kind='quadratic')
 
         # Rho
-        self.rho = self.__calc_rho(self.z, self.S, self.T, self.P)
-        self.calc_rho = interpolate.interp1d(self.z, self.rho, kind='quadratic')
+        self.rho = physics.model_rho.calc_rho (self.z, self.S, self.T, self.P)
+        self.calc_rho = interpolate.interp1d (self.z, self.rho, kind='quadratic')
 
         # Absorption (keep full frequency resolution, interpolate spatially)
-        self.__dz_dG_coefs = self.__calc_dz_dG_coefs(self.z, self.T, self.S, self.pH)
-        self.__calc_dz_dG_coefs_interp = interpolate.interp1d(self.z, self.__dz_dG_coefs, axis=1, kind='quadratic')
-        self.calc_dz_dG = lambda f, z: self.__calc_dz_dG(f, z, self.__calc_dz_dG_coefs_interp)
+        self.__dz_dG_coefs = physics.model_absorption.calc_dz_dG_coefs (self.z, self.T, self.S, self.pH)
+        self.__calc_dz_dG_coefs_interp = interpolate.interp1d (self.z, self.__dz_dG_coefs, axis=1, kind='quadratic')
+        self.calc_dz_dG = lambda f, z: physics.model_absorption.calc_dz_dG (f, z, self.__calc_dz_dG_coefs_interp)
+
+        # Impedance
+        self.Z = physics.model_impedance.calc_Z(self.rho, self.c)
+        self.calc_Z = interpolate.interp1d(self.z, self.Z, kind='quadratic')
