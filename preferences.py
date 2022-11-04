@@ -1,3 +1,8 @@
+# Environment parameters
+RES_X_DEFAULT = 100
+RES_Z_DEFAULT = 10
+
+# Ray tracing parameters
 DX_MAX_DEFAULT = 10.
 DZ_MAX_DEFAULT = 0.1
 N_STEPS_MAX = 100000
