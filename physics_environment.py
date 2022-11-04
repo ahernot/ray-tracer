@@ -35,7 +35,6 @@ class PhysicsEnvironment2D:
         :param res_x: horizontal resolution (in meters)
         :param res_z: vertical resolution (in meters)
         """
-
         # ! UNIDIRECTIONIAL FOR NOW (functions of z as only spatial dimension)
 
         self.__calc_S = physics.profile_salinity.calc_S  # Salinity as a function of z  # TODO: x, z
@@ -53,7 +52,6 @@ class PhysicsEnvironment2D:
 
         self.x = np.arange(self.range_min[0], self.range_max[0], self.res_x) if self.res_x != 0 else np.array([X_DEFAULT])  # Check if x-invariant
         self.z = np.arange(self.range_min[1], self.range_max[1], self.res_z) if self.res_z != 0 else np.array([Z_DEFAULT])  # Check if z-invariant
-
 
 
     def generate_params (self):
