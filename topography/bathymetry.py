@@ -4,6 +4,8 @@
 import numpy as np
 from scipy import interpolate
 
+import matplotlib.pyplot as plt
+
 
 EARTH_RADIUS_AVG = 6378000  # in meters (https://en.wikipedia.org/wiki/Earth_radius)
 
@@ -30,12 +32,16 @@ class Map:
         self.urcorner_rad = np.deg2rad(self.urcorner_deg)
         
         # Map interpolation
+        self.map_array = map
         self.__x = np.linspace(self.llcorner_rad[0], self.urcorner_rad[0], map.shape[1])
         self.__y = np.linspace(self.llcorner_rad[1], self.urcorner_rad[1], map.shape[0])
-        self.__z = map
+        self.__z = map.copy()
         self.__z_interp = interpolate.interp2d(self.__x, self.__y, self.__z, kind='linear', copy=False)
         self.z_from_rad = lambda phi, theta: np.diagonal(self.__z_interp(phi, theta))
         self.z_from_deg = lambda long, lat: self.z_rad(np.deg2rad(long), np.deg2rad(lat))
+
+    def __repr__ (self):
+        return f'map with llcorner: {self.llcorner_deg} and urcorner: {self.urcorner_deg}.'
 
     @classmethod
     def from_asc (cls, path: str):
@@ -52,35 +58,46 @@ class Map:
         
         # Load map
         map = np.loadtxt(path, skiprows=header_len)
-        map[map==header['NODATA_VALUE']] = np.nan
+        map[map==header['NODATA_VALUE']] = 0.  # np.nan  # TODO: keep np.nan?
 
         return cls(map, header['XLLCORNER'], header['YLLCORNER'], header['CELLSIZE'])
 
-    def cut (self, start_lat, start_long, stop_lat, stop_long, res):
+    def cut (self, start, stop, res):
         """
         Generate a cut from the interpolated map using a SLERP spherical linear interpolation
-        """
-
-        NPOINTS = 100  # from res (in meters)
-
         # TODO: check if start and end point in map range
+        :param start: start point long and lat (in degrees)
+        :param stop: stop point long and lat (in degrees)
+        """
+        p0 = self.llcorner_rad  # theta, phi (spherical coords)
+        p1 = self.urcorner_rad  # theta, phi (spherical coords)
+        # p0 = np.deg2rad(start)
+        # p1 = np.deg2rad(stop)
 
-        P0_rad = self.llcorner_rad
-        P1_rad = self.urcorner_rad
-        theta_rad = np.arccos(P0_rad.dot(P1_rad) / (EARTH_RADIUS_AVG**2))
+        # Find angle between the two points (using cartesian coordinates)
+        x0 = np.sin(p0[1]) * np.cos(p0[0])
+        y0 = np.sin(p0[1]) * np.sin(p0[0])
+        z0 = np.cos(p0[1])
+        x1 = np.sin(p1[1]) * np.cos(p1[0])
+        y1 = np.sin(p1[1]) * np.sin(p1[0])
+        z1 = np.cos(p1[1])
+        v0 = np.array([x0, y0, z0])
+        v1 = np.array([x1, y1, z1])
+        theta = np.arccos(np.dot(v0, v1))
 
+        NPOINTS = 100  # TODO: from res (in meters)
         t = np.linspace(0, 1, NPOINTS)
-        u = np.sin(theta_rad * (1 - t))
-        v = np.sin(theta_rad * t)
+        u = np.sin(theta * (1 - t))
+        v = np.sin(theta * t)
 
-        P_rad = (P0_rad * np.tile(u,(2,1)).T + P1_rad * np.tile(v,(2,1)).T) / np.sin(theta_rad)
-
-        z = self.z_from_rad(P_rad[:,0], P_rad[:,1])
-
-        # Generate x
+        p = (p0 * np.tile(u,(2,1)).T + p1 * np.tile(v,(2,1)).T) / np.sin(theta)
+        z = self.__z_interp(p[:,0], p[:,1])
         x = res * t
+        z = np.array([float(self.__z_interp(p[i,0], p[i,1])) for i in range(NPOINTS)])
 
         return x, z
+
+        # TODO: plot cut line onto map to verify the depth data
 
 
 # # Plot map
