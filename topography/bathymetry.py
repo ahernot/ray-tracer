@@ -44,10 +44,8 @@ class Map:
         self.z_from_rad = lambda phi, theta: self.__z_interp(phi, theta)
         self.z_from_deg = lambda long, lat: self.__z_interp(np.deg2rad(long), np.deg2rad(lat))
 
-        
-
     def __repr__ (self):
-        return f'map with llcorner: {self.llcorner_deg} and urcorner: {self.urcorner_deg}.\nShape = ({self.shape_x}, {self.shape_y}).'
+        return f'map with llcorner: {self.llcorner_deg} and urcorner: {self.urcorner_deg}.'  # \nshape: ({self.shape_x}, {self.shape_y}).'
 
     @classmethod
     def from_asc (cls, path: str):
@@ -68,13 +66,14 @@ class Map:
 
         return cls(map, header['XLLCORNER'], header['YLLCORNER'], header['CELLSIZE'])
 
-    def cut (self, start, stop, res):
+    def cut (self, start, stop, npoints=100):
         """
         Generate a cut from the interpolated map using a SLERP spherical linear interpolation
         # TODO: check if start and end point in map range
-        :param start: start point long and lat (in degrees)
-        :param stop: stop point long and lat (in degrees)
-        :param res:
+        :param start: Start point long and lat (in degrees)
+        :param stop: Stop point long and lat (in degrees)
+        # :param res: Resolution (in meters)  # TODO: optional kwargs param res_min which specifies max dx
+        :param npoints: Number of points
         """
 
         # Convert to spherical coordinates
@@ -92,28 +91,31 @@ class Map:
         v1 = np.array([x1, y1, z1])
         theta = np.arccos(np.dot(v0, v1))
 
-        NPOINTS = 100  # TODO: from res (in meters)
-        t = np.linspace(0, 1, NPOINTS)
+        # Calculate distances
+        d = theta * EARTH_RADIUS_AVG
+        res = d / (npoints - 1)
+        
+        # Map points (SLERP)
+        t = np.linspace(0, 1, npoints)
         u = np.sin(theta * (1 - t))
         v = np.sin(theta * t)
+        p = (p0 * np.tile(u,(2,1)).T + p1 * np.tile(v,(2,1)).T) / np.sin(theta)  # points
 
-        p = (p0 * np.tile(u,(2,1)).T + p1 * np.tile(v,(2,1)).T) / np.sin(theta)
-
+        # Generate interpolated points
         x = res * t
-        z = self.__z_interp(p[:,0], p[:,1], grid=False)  # invert y-values
+        z = self.__z_interp(p[:,0], p[:,1], grid=False)
 
         return x, z
 
-
     def display (self):
-        depth = np.copy(self.map_array)
-        depth[self.__map_nan] = 0.
+        depth = np.copy(self.map_array)[:,::-1]
+        depth[self.__map_nan[:,::-1]] = 0.
         depth = 1. - (np.abs(depth) / np.amax(np.abs(depth)))
 
         img = np.zeros((self.shape_x, self.shape_y, 3))
         img[:, :, 0] = depth
         img[:, :, 1] = depth
         img[:, :, 2] = depth
-        img[self.__map_nan] = [0.6, 0.3, 0.]
+        img[self.__map_nan[:,::-1]] = [0.6, 0.3, 0.]
 
         plt.imshow(np.transpose(img, (1, 0, 2)))
