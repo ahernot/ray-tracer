@@ -2,6 +2,7 @@
 # Copyright Anatole Hernot (Mines Paris), 2022. All rights reserved.
 
 # TODO: add a lowres setting into Environment2D
+# TODO: xx, yy = np.meshgrid(x, y) ?
 # TODO: quadratic or linear interpolation?
 
 
