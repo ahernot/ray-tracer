@@ -21,27 +21,33 @@ class Map:
         """
 
         # Resolution
+        self.map_array = map.T[:, ::-1]
+        self.__map_nan = np.isnan(self.map_array)  # nan mask
         self.cellsize = cellsize
         self.res = EARTH_RADIUS_AVG * np.deg2rad(self.cellsize)  # Map resolution (in meters)
+        self.shape_y, self.shape_x = map.shape
+        self.shape = self.map_array.shape
 
         # Lower-left corner
         self.llcorner_deg = np.array([xllcorner, yllcorner])
         self.llcorner_rad = np.deg2rad(self.llcorner_deg)
         # Upper-right corner
-        self.urcorner_deg = self.llcorner_deg + np.array([map.shape[1], map.shape[0]], dtype=float) * cellsize
+        self.urcorner_deg = self.llcorner_deg + np.array([self.shape_x, self.shape_y], dtype=float) * cellsize
         self.urcorner_rad = np.deg2rad(self.urcorner_deg)
         
         # Map interpolation
-        self.map_array = map
-        self.__x = np.linspace(self.llcorner_rad[0], self.urcorner_rad[0], map.shape[1])
-        self.__y = np.linspace(self.llcorner_rad[1], self.urcorner_rad[1], map.shape[0])
-        self.__z = map.copy()
-        self.__z_interp = interpolate.interp2d(self.__x, self.__y, self.__z, kind='linear', copy=False)
-        self.z_from_rad = lambda phi, theta: np.diagonal(self.__z_interp(phi, theta))
-        self.z_from_deg = lambda long, lat: self.z_rad(np.deg2rad(long), np.deg2rad(lat))
+        self.__x = np.linspace(self.llcorner_rad[0], self.urcorner_rad[0], self.shape_x)  # Longitude angular values (horizontal axis)
+        self.__y = np.linspace(self.llcorner_rad[1], self.urcorner_rad[1], self.shape_y)  # Latitude angular values (vertical axis)
+        self.__z = self.map_array.copy()
+        self.__z[self.__map_nan] = 0.
+        self.__z_interp = interpolate.RectBivariateSpline(self.__x, self.__y, self.__z)  # 2D interpolation
+        self.z_from_rad = lambda phi, theta: self.__z_interp(phi, theta)
+        self.z_from_deg = lambda long, lat: self.__z_interp(np.deg2rad(long), np.deg2rad(lat))
+
+        
 
     def __repr__ (self):
-        return f'map with llcorner: {self.llcorner_deg} and urcorner: {self.urcorner_deg}.'
+        return f'map with llcorner: {self.llcorner_deg} and urcorner: {self.urcorner_deg}.\nShape = ({self.shape_x}, {self.shape_y}).'
 
     @classmethod
     def from_asc (cls, path: str):
@@ -58,7 +64,7 @@ class Map:
         
         # Load map
         map = np.loadtxt(path, skiprows=header_len)
-        map[map==header['NODATA_VALUE']] = 0.  # np.nan  # TODO: keep np.nan?
+        map[map==header['NODATA_VALUE']] = np.nan
 
         return cls(map, header['XLLCORNER'], header['YLLCORNER'], header['CELLSIZE'])
 
@@ -68,13 +74,14 @@ class Map:
         # TODO: check if start and end point in map range
         :param start: start point long and lat (in degrees)
         :param stop: stop point long and lat (in degrees)
+        :param res:
         """
-        p0 = self.llcorner_rad  # theta, phi (spherical coords)
-        p1 = self.urcorner_rad  # theta, phi (spherical coords)
-        # p0 = np.deg2rad(start)
-        # p1 = np.deg2rad(stop)
 
-        # Find angle between the two points (using cartesian coordinates)
+        # Convert to spherical coordinates
+        p0 = np.deg2rad(start)
+        p1 = np.deg2rad(stop)
+
+        # Find angle between start and stop points (using cartesian coordinates)
         x0 = np.sin(p0[1]) * np.cos(p0[0])
         y0 = np.sin(p0[1]) * np.sin(p0[0])
         z0 = np.cos(p0[1])
@@ -91,25 +98,22 @@ class Map:
         v = np.sin(theta * t)
 
         p = (p0 * np.tile(u,(2,1)).T + p1 * np.tile(v,(2,1)).T) / np.sin(theta)
-        z = self.__z_interp(p[:,0], p[:,1])
+
         x = res * t
-        z = np.array([float(self.__z_interp(p[i,0], p[i,1])) for i in range(NPOINTS)])
+        z = self.__z_interp(p[:,0], p[:,1], grid=False)  # invert y-values
 
         return x, z
 
-        # TODO: plot cut line onto map to verify the depth data
 
+    def display (self):
+        depth = np.copy(self.map_array)
+        depth[self.__map_nan] = 0.
+        depth = 1. - (np.abs(depth) / np.amax(np.abs(depth)))
 
-# # Plot map
-# PLOT = np.empty((map.map.shape[0], map.map.shape[1], 3))
+        img = np.zeros((self.shape_x, self.shape_y, 3))
+        img[:, :, 0] = depth
+        img[:, :, 1] = depth
+        img[:, :, 2] = depth
+        img[self.__map_nan] = [0.6, 0.3, 0.]
 
-# array = np.copy(map.map)
-# array[np.isnan(array)] = 0
-# array = np.abs(array) / np.amax(np.abs(array))
-
-# PLOT[:, :, 0] = np.ones(array.shape) - array
-# PLOT[:, :, 1] = np.ones(array.shape) - array
-# PLOT[:, :, 2] = np.ones(array.shape) - array
-
-# PLOT[np.isnan(map.map)] = [0.6, 0.3, 0]
-# plt.imshow(PLOT)
+        plt.imshow(np.transpose(img, (1, 0, 2)))
