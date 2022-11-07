@@ -265,13 +265,13 @@ class RayPack2D:
         self.n_angles = 0
         self.n_freqs = 0
 
-        self.__spectrum_vals = dict()  # Samples of self.spectrum non-normalised distribution function
-        self.__spectrum_total = None
-        self.__spectrum_distrib = dict()  # xf
+        self.spectrum_vals = dict()  # Samples of self.spectrum non-normalised distribution function
+        self.spectrum_total = None
+        self.spectrum_distrib = dict()  # xf
 
         self.energy_total = 1.
         self.__energy_norm = None
-        self.ray_energy = None
+        self.ray_energy = None  # Dict of ray normalised energy unit per frequency
 
     def add (self, ray: Ray2D):
 
@@ -291,7 +291,7 @@ class RayPack2D:
 
     
     def regen_energy (self):
-        
+
         # Regenerate normalised ray energy unit
-        self.__energy_norm = self.energy_total / np.sum([len(self.freqs[freq]) * self.__spectrum_distrib[freq] for freq in self.freqs])
-        self.ray_energy = {freq: self.__spectrum_distrib[freq] * self.__energy_norm for freq in self.freqs}
+        self.__energy_norm = self.energy_total / np.sum([len(self.freqs[freq]) * self.spectrum_distrib[freq] for freq in self.freqs])
+        self.ray_energy = {freq: self.spectrum_distrib[freq] * self.__energy_norm for freq in self.freqs}
