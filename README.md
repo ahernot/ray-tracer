@@ -2,6 +2,8 @@
 
 Physics simulation ray-tracing algorithm
 
+Assumptions:
+* Ray path is frequency-independent (but rebounds aren't)
 
 TODO:
 - Clean up physics/
