@@ -150,13 +150,48 @@ class Simulation2D:
 class EigenraySim2D (Simulation2D):
 
     def __init__ (self, env: Environment2D, source, target, **kwargs):
-        self.target = target
+        """
+        Eigenray simulation
+        :param env: Simulation environment
+        :param source: Source point
+        :param target: Target point
+        :param kwargs/spectrum: Power spectrum
+        """
         super(EigenraySim2D, self).__init__(env, source, **kwargs)
+        self.target = target
+        
+        ###
 
-    def cast (self):
-        self.raypacks['scan'] = RayPack2D()
+        self.__scan()  # <= lacking angular range parameters, resolution, nb of rays to keep, distance threshold, etc.
 
         # 1. Scan (within reasonable angular range)
         # 2. Refine (iterations)
-
         # Generate one raypack per stage
+
+        self.n_refines = 0
+
+
+    def __scan (self):
+
+        # Initialise raypack
+        self.raypacks['scan'] = RayPack2D()
+
+        ###
+
+
+    def refine (self, **kwargs):
+        """
+        Refine
+        :param ?:
+        :param kwargs/iterations: Number of refine iterations
+        """
+
+        iterations = kwargs.get('iterations', 1)
+
+        for i in range(iterations):
+
+            # Initialise raypack
+            self.n_refines += 1
+            self.raypacks[f'refine_{self.n_refines}'] = RayPack2D()
+
+            ###
