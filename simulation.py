@@ -183,7 +183,7 @@ class EigenraySim2D (Simulation2D):
         """
         Refine
         :param ?:
-        :param kwargs/iterations: Number of refine iterations
+        :param kwargs/iterations: Number of back-to-back refine iterations
         """
 
         iterations = kwargs.get('iterations', 1)
@@ -195,3 +195,5 @@ class EigenraySim2D (Simulation2D):
             self.raypacks[f'refine_{self.n_refines}'] = RayPack2D()
 
             ###
+
+    # Generate filter => requires > 1 refine iteration and will by default choose the final refine raypack
