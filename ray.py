@@ -38,7 +38,7 @@ class Ray2D:
         self.env: Environment2D = env
         self.source: np.ndarray = source
         self.freq = freq
-        self.angle_init = angle
+        self.angle = angle
         self.stop_reason = None
 
         # Initialise
@@ -92,7 +92,7 @@ class Ray2D:
 
         # Initialise
         P = self.source
-        angle = -1 * self.angle_init + (np.pi / 2)  # convert angle notation
+        angle = -1 * self.angle + (np.pi / 2)  # convert angle notation
         dx_z = 1 / np.tan(angle)
         dxdx_z = 0  # no initial curvature
         x_dir = 1.  # forwards propagation
@@ -251,3 +251,47 @@ class Ray2D:
         self.calc_z = interpolate.interp1d(self.XZ[:, 0], self.XZ[:, 1], kind='linear')
         
         self.__is_propagated = True
+
+
+class RayPack2D:
+
+    def __init__ (self):
+        self.rays = list()  # Raw list of rays (stored as references to Ray2D objects)
+        self.angles = dict()  # Dictionary of Ray2D objects indexed by angle
+        self.freqs = dict()  # Dictionary of Ray2D objects indexed by frequency
+        self.stop_reasons = dict()  # Dictionary of Ray2D objects indexed by stop reason
+
+        self.n_rays = 0
+        self.n_angles = 0
+        self.n_freqs = 0
+
+        self.__spectrum_vals = dict()  # Samples of self.spectrum non-normalised distribution function
+        self.__spectrum_total = None
+        self.__spectrum_distrib = dict()  # xf
+
+        self.energy_total = 1.
+        self.__energy_norm = None
+        self.ray_energy = None
+
+    def add (self, ray: Ray2D):
+
+        # Add ray to database
+        self.rays .append(ray)
+        self.angles[ray.angle] = self.angles[ray.angle] + [ray] if ray.angle in self.angles else [ray]
+        self.freqs[ray.freq] = self.freqs[ray.freq] + [ray] if ray.freq in self.freqs else [ray]
+        self.stop_reasons[ray.stop_reason] = self.stop_reasons[ray.stop_reason] + [ray] if ray.stop_reason in self.stop_reasons else [ray]
+
+        # Update counters
+        self.n_rays += 1
+        self.n_angles += 0 if ray.angle in self.angles else 1
+        self.n_freqs += 0 if ray.freq in self.freqs else 1
+        # self.n_rays = len(self.rays)
+        # self.n_angles = len(self.angles)
+        # self.n_freqs = len(self.freqs)
+
+    
+    def regen_energy (self):
+        
+        # Regenerate normalised ray energy unit
+        self.__energy_norm = self.energy_total / np.sum([len(self.freqs[freq]) * self.__spectrum_distrib[freq] for freq in self.freqs])
+        self.ray_energy = {freq: self.__spectrum_distrib[freq] * self.__energy_norm for freq in self.freqs}
