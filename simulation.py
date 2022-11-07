@@ -120,12 +120,12 @@ class Simulation2D:
         cutoff = kwargs.get('cutoff', .02)
 
         # Initialise heatmap
-        heatmap_shape = np.ceil(self.size/res).astype(int) [::-1]
+        heatmap_shape = np.ceil(self.size/res).astype(int) + 1  # +1 because the downsampling of the coordinates is right bound inclusive
         heatmap_full = np.zeros((heatmap_shape))
 
         for ray in self.rays:
 
-            # Generate reduced mask
+            # Generate array of downsampled coordinates of shape (N, 2) = ray.XZ.shape and convert from physical coordinates to matrix coordinates (inverting y-axis)
             rx = ray.XZ.copy().astype(int)
             rx[:, 0] //= res[0]
             rx[:, 1] //= -1 * res[1]
@@ -140,7 +140,7 @@ class Simulation2D:
         heatmap_norm[heatmap_norm > cutoff] = cutoff
         heatmap_plot = np.power(heatmap_norm, reduction_power) if reduction_power != 1 else heatmap_norm
 
-        return heatmap_plot
+        return heatmap_plot.T
 
 
     def plot (self, fig):
