@@ -1,11 +1,19 @@
 import numpy as np
 
 def coords_to_mask_2d (shape, coords, vals=True):
+    """
+    Create 2D mask from array of (x,y) coordinates
+    :param shape:
+    :param coords: Physical coordinates ([::-1] from heatmap coordinates)
+    :param vals:
+    """
+
+    # Initialise and flatten mask
     mask_blank = np.zeros(shape)
     mask_line = mask_blank.reshape(-1)
 
-    c_line = coords[:, 0] * shape[0] + coords[:, 1]
-    c_line_filtered = c_line[c_line < mask_line.shape[0]]
+    # Map coordinates to flattened heatmap
+    c_line = coords[:, 0] * shape[1] + coords[:, 1]
+    mask_line[c_line] = vals
 
-    mask_line[c_line_filtered] = vals
-    return mask_line.reshape(shape[::-1]).T
+    return mask_line.reshape(shape)
