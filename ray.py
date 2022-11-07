@@ -112,6 +112,38 @@ class Ray2D:
             x, z = P
             x_new, z_new = P_new = P + k
 
+
+            # Check simulation bounds
+            if x_new < self.env.range_min[0]:
+                x_new = self.env.range_min[0]
+                z_new = -1 * dx_z * (x_new - x) + z  # Only hit when going left (x_dir = -1)
+                self.XZ = np.insert(self.XZ, i+1, np.array([x_new, z_new]), axis=0)  # Add final point
+                if verbose: print('DEBUG: Out of bounds (x-axis min)')
+                self.stop_reason = 'exit-xmin'
+                break 
+            elif x_new > self.env.range_max[0]:
+                x_new = self.env.range_max[0]
+                z_new = dx_z * (x_new - x) + z  # Only hit when going right (x_dir = 1)
+                self.XZ = np.insert(self.XZ, i+1, np.array([x_new, z_new]), axis=0)  # Add final point
+                if verbose: print('DEBUG: Out of bounds (x-axis max)')
+                self.stop_reason = 'exit-xmax'
+                break
+            elif z_new < self.env.range_min[1]:
+                z_new = self.env.range_min[1]
+                x_new = x_dir * (z_new - z) / dx_z + x
+                self.XZ = np.insert(self.XZ, i+1, np.array([x_new, z_new]), axis=0)  # Add final point
+                if verbose: print('DEBUG: Out of bounds (z-axis min)')
+                self.stop_reason = 'exit-zmin'
+                break
+            elif z_new > self.env.range_max[1]:
+                z_new = self.env.range_max[1]
+                x_new = x_dir * (z_new - z) / dx_z + x
+                self.XZ = np.insert(self.XZ, i+1, np.array([x_new, z_new]), axis=0)  # Add final point
+                if verbose: print('DEBUG: Out of bounds (z-axis max)')
+                self.stop_reason = 'exit-zmax'
+                break
+
+
             # Check floor rebounds
             if self.env.floor and z_new < self.env.floor(x_new):  # Calculate intersection point and new direction vector
                 x_new = float( fsolve( lambda x1: self.env.floor(x) - dx_z * (x1 - x) - z, x0=x ))
@@ -160,36 +192,6 @@ class Ray2D:
             
             else:
                 P_new = np.array([x_new, z_new])
-
-            # Check simulation bounds
-            if x_new < self.env.range_min[0]:
-                x_new = self.env.range_min[0]
-                z_new = -1 * dx_z * (x_new - x) + z  # Only hit when going left (x_dir = -1)
-                self.XZ = np.insert(self.XZ, i+1, np.array([x_new, z_new]), axis=0)  # Add final point
-                if verbose: print('DEBUG: Out of bounds (x-axis min)')
-                self.stop_reason = 'exit-xmin'
-                break 
-            elif x_new > self.env.range_max[0]:
-                x_new = self.env.range_max[0]
-                z_new = dx_z * (x_new - x) + z  # Only hit when going right (x_dir = 1)
-                self.XZ = np.insert(self.XZ, i+1, np.array([x_new, z_new]), axis=0)  # Add final point
-                if verbose: print('DEBUG: Out of bounds (x-axis max)')
-                self.stop_reason = 'exit-xmax'
-                break
-            elif z_new < self.env.range_min[1]:
-                z_new = self.env.range_min[1]
-                x_new = x_dir * (z_new - z) / dx_z + x
-                self.XZ = np.insert(self.XZ, i+1, np.array([x_new, z_new]), axis=0)  # Add final point
-                if verbose: print('DEBUG: Out of bounds (z-axis min)')
-                self.stop_reason = 'exit-zmin'
-                break
-            elif z_new > self.env.range_max[1]:
-                z_new = self.env.range_max[1]
-                x_new = x_dir * (z_new - z) / dx_z + x
-                self.XZ = np.insert(self.XZ, i+1, np.array([x_new, z_new]), axis=0)  # Add final point
-                if verbose: print('DEBUG: Out of bounds (z-axis max)')
-                self.stop_reason = 'exit-zmax'
-                break
 
 
             # Add new point
