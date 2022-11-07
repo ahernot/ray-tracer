@@ -29,6 +29,7 @@ class Simulation2D:
 
         self.spectrum = kwargs.get('spectrum', lambda x: 1.)  # spectral power distribution (only the frequencies generated make up the ray power)
 
+        # TODO: Generate a range_min and range_max for plotting which is updated with every ray added => for RayPack2D rather than Simulation2D
         self.range_min = self.env.range_min
         self.range_max = self.env.range_max
         self.size = self.env.size
