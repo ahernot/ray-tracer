@@ -32,8 +32,12 @@ class Environment2D:
         # Initialise range and resolution
         self.res_x = kwargs.get('res_x', RES_X_DEFAULT)
         self.res_z = kwargs.get('res_z', RES_Z_DEFAULT)
-        self.range_min = np.array([0, -5500])  # TODO: set default values
-        self.range_max = np.array([100000, 0])  # # TODO: set default values
+        # self.range_min = np.array([0, -5500])  # TODO: set default values
+        # self.range_max = np.array([100000, 0])  # # TODO: set default values
+
+        # Values for Bathy.Map map - TODO: generate ranges based on bathy profile bounds
+        self.range_min = np.array([0, -5500])
+        self.range_max = np.array([3700, 0])  #3740
         self.size = self.range_max - self.range_min
 
         # Generate physics environment
