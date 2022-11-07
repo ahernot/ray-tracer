@@ -54,7 +54,7 @@ class Simulation2D:
         # Regenerate dictionary of spectral energy distribution per frequency (xf)
         raypack.spectrum_distrib = {freq: self.spectrum(freq) / raypack.spectrum_total for freq in raypack.freqs}
 
-    def add_rays (self, freq, *angles, **kwargs):
+    def cast (self, freq, *angles, **kwargs):
         """
         Propagate rays and add them to the simulation
         :param freq: Ray frequency (Hz)
