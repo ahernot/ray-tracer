@@ -59,13 +59,14 @@ class Simulation2D:
         Propagate rays and add them to the simulation
         :param freq: Ray frequency (Hz)
         :param angles: Angles
-        :param kwargs/pack: Raypack
+        :param kwargs/pack: Raypack name
+        :param kwargs/raypack: Raypack
         """
 
         # Get target raypack
         pack = kwargs.get('pack', 'main')
         if pack not in self.raypacks: self.raypacks[pack] = RayPack2D()
-        raypack = self.raypacks[pack]
+        raypack = kwargs.get('raypack', self.raypacks[pack])
 
         # Power recalculation flag
         redistribute_power = False
@@ -93,6 +94,8 @@ class Simulation2D:
         :param res: Resolution (in meters) - # TODO? must be less precise than the simulation's max dz and dx
         :param n_reductions:
         :param cutoff: Saturation percentage for normalised heatmap (pre-log scaling)
+        :param kwargs/pack: Raypack name
+        :param kwargs/raypack: Raypack
         """
 
         # Get heatmap parameters
@@ -102,7 +105,7 @@ class Simulation2D:
         
         # Get target raypack
         pack = kwargs.get('pack', 'main')
-        raypack = self.raypacks[pack]
+        raypack = kwargs.get('raypack', self.raypacks[pack])
 
         # Initialise heatmap
         heatmap_shape = np.ceil(self.size/res).astype(int) + 1  # +1 because the downsampling of the coordinates is right bound inclusive
@@ -128,10 +131,15 @@ class Simulation2D:
         return heatmap_plot.T
 
     def plot (self, fig, **kwargs):
+        """
+        :param fig: Figure
+        :param kwargs/pack: Raypack name
+        :param kwargs/raypack: Raypack
+        """
 
         # Get target raypack
         pack = kwargs.get('pack', 'main')
-        raypack = self.raypacks[pack]
+        raypack = kwargs.get('raypack', self.raypacks[pack])
 
         for ray in raypack.rays:
             ray.plot(fig)
@@ -156,12 +164,14 @@ class EigenraySim2D (Simulation2D):
         :param source: Source point
         :param target: Target point
         :param kwargs/spectrum: Power spectrum
+        :param kwargs/scan_freq: Scanning frequency (doesn't affect ray path)
         """
         super(EigenraySim2D, self).__init__(env, source, **kwargs)
         self.target = target
+        self.scan_freq = kwargs.get('scan_freq', 1)
         
         ###
-
+        self.init_kwargs = kwargs
         self.__scan()  # <= lacking angular range parameters, resolution, nb of rays to keep, distance threshold, etc.
 
         # 1. Scan (within reasonable angular range)
@@ -174,9 +184,14 @@ class EigenraySim2D (Simulation2D):
     def __scan (self):
 
         # Initialise raypack
-        self.raypacks['scan'] = RayPack2D()
+        self.raypacks['scan'] = raypack = RayPack2D()
 
         ###
+        angle_min = -1 * np.pi / 2 + 0.01
+        angle_max = np.pi / 2 - 0.01
+        angles = np.linspace(angle_min, angle_max, 100)
+
+        self.cast (self.scan_freq, *angles, pack='scan', **self.init_kwargs)
 
 
     def refine (self, **kwargs):
@@ -195,5 +210,7 @@ class EigenraySim2D (Simulation2D):
             self.raypacks[f'refine_{self.n_refines}'] = RayPack2D()
 
             ###
+
+            # self.cast (self.scan_freq, *angles, raypack=raypack, **self.init_kwargs)
 
     # Generate filter => requires > 1 refine iteration and will by default choose the final refine raypack
