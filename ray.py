@@ -329,3 +329,7 @@ class RayPack2D:
         result.ray_energy = self.ray_energy
 
         return result
+
+
+class EigenRayPack2D (RayPack2D):
+    pass

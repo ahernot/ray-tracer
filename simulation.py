@@ -171,7 +171,7 @@ class Simulation2D:
         pass
 
 
-
+################ TODO: use EigenRayPack2D instead of RayPack2D
 class EigenraySim2D (Simulation2D):
 
     def __init__ (self, env: Environment2D, source, target, **kwargs):
@@ -189,6 +189,8 @@ class EigenraySim2D (Simulation2D):
         self.pack_scan = 'scan'
         self.__gen_pack_temp_refine = lambda n_refines, ray_id: f'__iter{n_refines}-refine-ray{ray_id}'  # iter3-refine-ray7
         self.__gen_pack_refine = lambda n_refines: f'refine-{n_refines}'
+
+        self.dist = dict()
 
         super(EigenraySim2D, self).__init__(env, source, pack_default=None, **kwargs)
         self.target = target
@@ -218,12 +220,12 @@ class EigenraySim2D (Simulation2D):
 
         # Generate temporary raypack
         self.raypacks[self.__pack_temp_scan] = RayPack2D()
-        ray__pack_temp_scan = self.raypacks[self.__pack_temp_scan]
+        raypack_temp_scan = self.raypacks[self.__pack_temp_scan]
 
         # Cast n_rays_scan scanning rays
         self.cast (self.scan_freq, *angles, pack=self.__pack_temp_scan, target=self.target, **self.init_kwargs)
-        # Keep rays
-        dist_list_sorted = np.sort(list(ray__pack_temp_scan.dist.keys()))
+        dist_list_sorted = np.sort(list(raypack_temp_scan.dist.keys()))
+        # self.dist[self.pack_scan] = dist_list_sorted  # TODO: save in the raypack
 
         # Generate scan output raypack
         self.raypacks[self.pack_scan] = RayPack2D()
