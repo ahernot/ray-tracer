@@ -260,6 +260,7 @@ class RayPack2D:
         self.angles = dict()  # Dictionary of Ray2D objects indexed by angle
         self.freqs = dict()  # Dictionary of Ray2D objects indexed by frequency
         self.stop_reasons = dict()  # Dictionary of Ray2D objects indexed by stop reason
+        self.dist = dict()
 
         self.n_rays = 0
         self.n_angles = 0
@@ -273,13 +274,20 @@ class RayPack2D:
         self.__energy_norm = None
         self.ray_energy = None  # Dict of ray normalised energy unit per frequency
 
-    def add (self, ray: Ray2D):
+    def add (self, ray: Ray2D, **kwargs):
 
         # Add ray to database
         self.rays .append(ray)
         self.angles[ray.angle] = self.angles[ray.angle] + [ray] if ray.angle in self.angles else [ray]
         self.freqs[ray.freq] = self.freqs[ray.freq] + [ray] if ray.freq in self.freqs else [ray]
         self.stop_reasons[ray.stop_reason] = self.stop_reasons[ray.stop_reason] + [ray] if ray.stop_reason in self.stop_reasons else [ray]
+        
+        target = kwargs.get('target', None)
+        if target is not None:
+            try: d = abs(target[1] - ray.calc_z(target[0]))
+            except: d = np.nan
+            self.dist[d] = self.dist[d] + [ray] if d in self.dist else [ray]
+
 
         # Update counters
         self.n_rays += 1
@@ -289,9 +297,31 @@ class RayPack2D:
         # self.n_angles = len(self.angles)
         # self.n_freqs = len(self.freqs)
 
-    
     def regen_energy (self):
-
         # Regenerate normalised ray energy unit
         self.__energy_norm = self.energy_total / np.sum([len(self.freqs[freq]) * self.spectrum_distrib[freq] for freq in self.freqs])
         self.ray_energy = {freq: self.spectrum_distrib[freq] * self.__energy_norm for freq in self.freqs}
+
+    def __copy__ (self):
+        cls = self.__class__
+        result = cls.__new__(cls)
+
+        result.rays = self.rays .copy()
+        result.angles = self.angles .copy()
+        result.freqs = self.freqs .copy()
+        result.stop_reasons = self.stop_reasons .copy()
+        result.dist = self.dist .copy()
+
+        result.n_rays = self.n_rays
+        result.n_angles = self.n_angles
+        result.n_freqs = self.n_freqs
+
+        result.spectrum_vals = self.spectrum_vals .copy()
+        result.spectrum_total = self.spectrum_total
+        result.spectrum_distrib = self.spectrum_distrib
+
+        result.energy_total = self.energy_total
+        result.__energy_norm = self.__energy_norm
+        result.ray_energy = self.ray_energy
+
+        return result

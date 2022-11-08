@@ -21,22 +21,25 @@ class Simulation2D:
         :param env: Simulation environment
         :param source: Source point
         :param kwargs/spectrum: Power spectrum
-        :param kwargs/pack_default: Default pack name
+        :param kwargs/pack_default: Default pack name (use None to manually create and assign raypacks)
         """
         
+        # Get simulation objects
         self.env = env
         self.source = source
-        self.pack_default = kwargs.get('pack_default', 'main')
-        self.raypacks = {self.pack_default: RayPack2D()}
-        
+        self.raypacks = dict()
 
+        # Generate default pack
+        self.pack_default = kwargs.get('pack_default', 'main') 
+        if self.pack_default: self.raypacks[self.pack_default] = RayPack2D()
+        
+        # Get spectral power distribution
         self.spectrum = kwargs.get('spectrum', lambda x: 1.)  # spectral power distribution (only the frequencies generated make up the ray power)
 
-        # TODO: Generate a range_min and range_max for plotting which is updated with every ray added => for RayPack2D rather than Simulation2D
+        # Initialise ranges
         self.range_min = self.env.range_min
         self.range_max = self.env.range_max
         self.size = self.env.size
-
         self.range_min_plot = np.zeros(2)
         self.range_max_plot = np.zeros(2)
         self.size_plot = np.zeros(2)
@@ -84,8 +87,9 @@ class Simulation2D:
             # Generate ray
             ray = Ray2D (self.env, self.source, freq, angle)
             ray.propagate(**kwargs)
+            
             # Add ray to simulation
-            raypack.add(ray)
+            raypack.add(ray, **kwargs)
 
             # Update plot range
             if ray.range_min[0] < self.range_min_plot[0]: self.range_min_plot[0] = ray.range_min[0]
@@ -179,31 +183,54 @@ class EigenraySim2D (Simulation2D):
         :param kwargs/spectrum: Power spectrum
         :param kwargs/scan_freq: Scanning frequency (doesn't affect ray path)
         """
-        super(EigenraySim2D, self).__init__(env, source, pack_default='scan', **kwargs)
+
+        # Pack names
+        self.__pack_temp_scan = '__iter0-scan'
+        self.pack_scan = 'scan'
+        self.__gen_pack_temp_refine = lambda n_refines, ray_id: f'__iter{n_refines}-refine-ray{ray_id}'  # iter3-refine-ray7
+        self.__gen_pack_refine = lambda n_refines: f'refine-{n_refines}'
+
+        super(EigenraySim2D, self).__init__(env, source, pack_default=None, **kwargs)
         self.target = target
         self.scan_freq = kwargs.get('scan_freq', 1)
-        
-        ###
         self.init_kwargs = kwargs
-        self.__scan()  # <= lacking angular range parameters, resolution, nb of rays to keep, distance threshold, etc.
+        
+        # Initial scan
+        self.n_rays = kwargs.get('n_rays', 100)
+        n_rays_scan = self.n_rays * 10  # TODO: default multiplier
+        self.__scan(n_rays_scan)  # <= lacking angular range parameters, resolution, nb of rays to keep, distance threshold, etc.
 
         # 1. Scan (within reasonable angular range)
         # 2. Refine (iterations)
         # Generate one raypack per stage
 
+        # Refinement stages counter
         self.n_refines = 0
 
 
-    def __scan (self):
+    def __scan (self, n_rays_scan):
+        # TODO: scan(n_rays, angle_min, angle_max) with separate processing function taking average of env and nb of rebounds (+1)
 
         ###
         angle_min = -1 * np.pi / 2 + 0.01
         angle_max = np.pi / 2 - 0.01
-        angles = np.linspace(angle_min, angle_max, 1000)
+        angles = np.linspace(angle_min, angle_max, n_rays_scan)
 
-        self.cast (self.scan_freq, *angles, pack='scan', **self.init_kwargs)
+        # Generate temporary raypack
+        self.raypacks[self.__pack_temp_scan] = RayPack2D()
+        ray__pack_temp_scan = self.raypacks[self.__pack_temp_scan]
+
+        # Cast n_rays_scan scanning rays
+        self.cast (self.scan_freq, *angles, pack=self.__pack_temp_scan, target=self.target, **self.init_kwargs)
+        # Keep rays
+        dist_list_sorted = np.sort(list(ray__pack_temp_scan.dist.keys()))
+
+        # Generate scan output raypack
+        self.raypacks[self.pack_scan] = RayPack2D()
+        raypack_scan = self.raypacks[self.pack_scan]
 
         # keep n rays for each nb of rebounds, up to max nb of rebounds
+
 
 
     def refine (self, **kwargs):
@@ -215,14 +242,36 @@ class EigenraySim2D (Simulation2D):
 
         iterations = kwargs.get('iterations', 1)
 
+        # Load previous raypack
+        pack_prev = self.pack_scan if self.n_refines == 0 else self.__gen_pack_refine(self.n_refines-1)
+        raypack_prev = self.raypacks[pack_prev]
+
+        # Generate new raypack
+        pack_refine = self.__gen_pack_refine(self.n_refines)
+        self.raypacks[pack_refine] = RayPack2D()
+        raypack_refine = self.raypacks[pack_refine]
+
         for i in range(iterations):
+            for ray_id, ray in enumerate():
+                # TODO: IMPORTANT: ALWAYS KEEP RAYS IN SAME ORDER FOR EACH REFINE (CHILD OF RAY 1 IS NEW_RAY 1 ETC)
+                # Increment refines counter (first refine has id=1)
+                self.n_refines += 1
 
-            # Initialise raypack
-            self.n_refines += 1
-            self.raypacks[f'refine_{self.n_refines}'] = RayPack2D()
+                # Generate temporary raypack
+                pack_temp = self.__gen_pack_temp_refine(self.n_refines, ray_id)
+                self.raypacks[pack_temp] = RayPack2D()
+                raypack_temp = self.raypacks[pack_temp]
+                # IF NO PROGRESS FOR A SPECIFIC RAY: DO SOMETHING ELSE (check dist_new - dist_prev)
 
-            ###
+                # Cast rays
+                # self.cast (self.scan_freq, *angles, raypack=pack_temp)#, **self.init_kwargs)
 
-            # self.cast (self.scan_freq, *angles, raypack=raypack, **self.init_kwargs)
+                # DO SORTING STUFF (function?)
 
     # Generate filter => requires > 1 refine iteration and will by default choose the final refine raypack
+
+
+    def get (self):
+        # TODO: rename, etc
+        pack = self.__gen_pack_refine(self.n_refines)
+        raypack = self.raypacks[pack]
