@@ -37,6 +37,10 @@ class Simulation2D:
         self.range_max = self.env.range_max
         self.size = self.env.size
 
+        self.range_min_plot = np.zeros(2)
+        self.range_max_plot = np.zeros(2)
+        self.size_plot = np.zeros(2)
+
     def __repr__ (self):  # TODO: to improve later
         stop_reasons_formatted = '\n'.join([f'\t{stop_reason}: {len(self.stop_reasons[stop_reason])}' for stop_reason in self.stop_reasons])
         return f'2D simulation containing {self.n_rays} rays\nStop reasons:\n{stop_reasons_formatted}'
@@ -83,6 +87,15 @@ class Simulation2D:
             # Add ray to simulation
             raypack.add(ray)
 
+            # Update plot range
+            if ray.range_min[0] < self.range_min_plot[0]: self.range_min_plot[0] = ray.range_min[0]
+            if ray.range_min[1] < self.range_min_plot[1]: self.range_min_plot[1] = ray.range_min[1]
+            if ray.range_max[0] > self.range_max_plot[0]: self.range_max_plot[0] = ray.range_max[0]
+            if ray.range_max[1] > self.range_max_plot[1]: self.range_max_plot[1] = ray.range_max[1]
+
+        # Update plot size
+        self.size_plot = self.range_max_plot - self.range_min_plot
+
         # Redistribute spectral power (if new frequency added)
         if redistribute_power:
             self.__distribute_spectral_power(pack)
@@ -109,7 +122,7 @@ class Simulation2D:
         raypack = self.raypacks[pack]
 
         # Initialise heatmap
-        heatmap_shape = np.ceil(self.size/res).astype(int) + 1  # +1 because the downsampling of the coordinates is right bound inclusive
+        heatmap_shape = np.ceil(self.size_plot/res).astype(int) + 1  # +1 because the downsampling of the coordinates is right bound inclusive
         heatmap_full = np.zeros((heatmap_shape))
 
         for ray in raypack.rays:
@@ -189,6 +202,8 @@ class EigenraySim2D (Simulation2D):
         angles = np.linspace(angle_min, angle_max, 1000)
 
         self.cast (self.scan_freq, *angles, pack='scan', **self.init_kwargs)
+
+        # keep n rays for each nb of rebounds, up to max nb of rebounds
 
 
     def refine (self, **kwargs):
