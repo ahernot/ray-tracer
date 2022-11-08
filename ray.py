@@ -253,6 +253,10 @@ class Ray2D:
         self.__is_propagated = True
 
 
+
+
+# TODO: add __repr__
+
 class RayPack2D:
 
     def __init__ (self):
