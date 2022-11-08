@@ -60,13 +60,12 @@ class Simulation2D:
         :param freq: Ray frequency (Hz)
         :param angles: Angles
         :param kwargs/pack: Raypack name
-        :param kwargs/raypack: Raypack
         """
 
         # Get target raypack
         pack = kwargs.get('pack', 'main')
         if pack not in self.raypacks: self.raypacks[pack] = RayPack2D()
-        raypack = kwargs.get('raypack', self.raypacks[pack])
+        raypack = self.raypacks[pack]
 
         # Power recalculation flag
         redistribute_power = False
@@ -95,7 +94,6 @@ class Simulation2D:
         :param n_reductions:
         :param cutoff: Saturation percentage for normalised heatmap (pre-log scaling)
         :param kwargs/pack: Raypack name
-        :param kwargs/raypack: Raypack
         """
 
         # Get heatmap parameters
@@ -105,7 +103,7 @@ class Simulation2D:
         
         # Get target raypack
         pack = kwargs.get('pack', 'main')
-        raypack = kwargs.get('raypack', self.raypacks[pack])
+        raypack = self.raypacks[pack]
 
         # Initialise heatmap
         heatmap_shape = np.ceil(self.size/res).astype(int) + 1  # +1 because the downsampling of the coordinates is right bound inclusive
@@ -134,12 +132,11 @@ class Simulation2D:
         """
         :param fig: Figure
         :param kwargs/pack: Raypack name
-        :param kwargs/raypack: Raypack
         """
 
         # Get target raypack
         pack = kwargs.get('pack', 'main')
-        raypack = kwargs.get('raypack', self.raypacks[pack])
+        raypack = self.raypacks[pack]
 
         for ray in raypack.rays:
             ray.plot(fig)
