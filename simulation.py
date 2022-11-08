@@ -21,11 +21,14 @@ class Simulation2D:
         :param env: Simulation environment
         :param source: Source point
         :param kwargs/spectrum: Power spectrum
+        :param kwargs/pack_default: Default pack name
         """
         
         self.env = env
         self.source = source
-        self.raypacks = {'main': RayPack2D()}
+        self.pack_default = kwargs.get('pack_default', 'main')
+        self.raypacks = {self.pack_default: RayPack2D()}
+        
 
         self.spectrum = kwargs.get('spectrum', lambda x: 1.)  # spectral power distribution (only the frequencies generated make up the ray power)
 
@@ -63,7 +66,7 @@ class Simulation2D:
         """
 
         # Get target raypack
-        pack = kwargs.get('pack', 'main')
+        pack = kwargs.get('pack', self.pack_default)
         if pack not in self.raypacks: self.raypacks[pack] = RayPack2D()
         raypack = self.raypacks[pack]
 
@@ -102,7 +105,7 @@ class Simulation2D:
         cutoff = kwargs.get('cutoff', .02)
         
         # Get target raypack
-        pack = kwargs.get('pack', 'main')
+        pack = kwargs.get('pack', self.pack_default)
         raypack = self.raypacks[pack]
 
         # Initialise heatmap
@@ -135,7 +138,7 @@ class Simulation2D:
         """
 
         # Get target raypack
-        pack = kwargs.get('pack', 'main')
+        pack = kwargs.get('pack', self.pack_default)
         raypack = self.raypacks[pack]
 
         for ray in raypack.rays:
@@ -163,7 +166,7 @@ class EigenraySim2D (Simulation2D):
         :param kwargs/spectrum: Power spectrum
         :param kwargs/scan_freq: Scanning frequency (doesn't affect ray path)
         """
-        super(EigenraySim2D, self).__init__(env, source, **kwargs)
+        super(EigenraySim2D, self).__init__(env, source, pack_default='scan', **kwargs)
         self.target = target
         self.scan_freq = kwargs.get('scan_freq', 1)
         
@@ -180,13 +183,10 @@ class EigenraySim2D (Simulation2D):
 
     def __scan (self):
 
-        # Initialise raypack
-        self.raypacks['scan'] = raypack = RayPack2D()
-
         ###
         angle_min = -1 * np.pi / 2 + 0.01
         angle_max = np.pi / 2 - 0.01
-        angles = np.linspace(angle_min, angle_max, 100)
+        angles = np.linspace(angle_min, angle_max, 1000)
 
         self.cast (self.scan_freq, *angles, pack='scan', **self.init_kwargs)
 
