@@ -5,6 +5,8 @@
 
 import numpy as np
 # import matplotlib.pyplot as plt
+from operator import itemgetter
+import itertools
 
 from functions import coords_to_mask_2d
 
@@ -85,11 +87,11 @@ class Simulation2D:
         for angle in angles:
 
             # Generate ray
-            ray = Ray2D (self.env, self.source, freq, angle)
+            ray = Ray2D (self.env, self.source, freq, angle, **kwargs)
             ray.propagate(**kwargs)
             
             # Add ray to simulation
-            raypack.add(ray, **kwargs)
+            raypack.add(ray)
 
             # Update plot range
             if ray.range_min[0] < self.range_min_plot[0]: self.range_min_plot[0] = ray.range_min[0]
@@ -184,6 +186,8 @@ class EigenraySim2D (Simulation2D):
         :param kwargs/scan_freq: Scanning frequency (doesn't affect ray path)
         """
 
+        self.init_kwargs = kwargs
+
         # Pack names
         self.__pack_temp_scan = '__iter0-scan'
         self.pack_scan = 'scan'
@@ -193,12 +197,11 @@ class EigenraySim2D (Simulation2D):
         self.dist = dict()
 
         super(EigenraySim2D, self).__init__(env, source, pack_default=None, **kwargs)
-        self.target = target
+        self.target: np.ndarray = target
         self.scan_freq = kwargs.get('scan_freq', 1)
-        self.init_kwargs = kwargs
         
         # Initial scan
-        self.n_rays = kwargs.get('n_rays', 100)
+        self.n_rays: int = kwargs.get('n_rays', 100)
         n_rays_scan = self.n_rays * 10  # TODO: default multiplier
         self.__scan(n_rays_scan)  # <= lacking angular range parameters, resolution, nb of rays to keep, distance threshold, etc.
 
@@ -211,9 +214,9 @@ class EigenraySim2D (Simulation2D):
 
 
     def __scan (self, n_rays_scan):
-        # TODO: scan(n_rays, angle_min, angle_max) with separate processing function taking average of env and nb of rebounds (+1)
+        # TODO: __scan (self, n_rays, angle_min, angle_max) with separate processing function taking average of env and nb of rebounds (+1)
 
-        ###
+        ### TODO: ANGULAR RANGE
         angle_min = -1 * np.pi / 2 + 0.01
         angle_max = np.pi / 2 - 0.01
         angles = np.linspace(angle_min, angle_max, n_rays_scan)
@@ -225,11 +228,12 @@ class EigenraySim2D (Simulation2D):
         # Cast n_rays_scan scanning rays
         self.cast (self.scan_freq, *angles, pack=self.__pack_temp_scan, target=self.target, **self.init_kwargs)
         dist_list_sorted = np.sort(list(raypack_temp_scan.dist.keys()))
-        # self.dist[self.pack_scan] = dist_list_sorted  # TODO: save in the raypack
+        rays = list(itertools.chain.from_iterable( itemgetter(*dist_list_sorted[:10])(raypack_temp_scan.dist) ))  # Get rays from 10 first keys  #TODO: from N first rays (careful: overflow if range extends past nb of keys)
 
         # Generate scan output raypack
         self.raypacks[self.pack_scan] = RayPack2D()
         raypack_scan = self.raypacks[self.pack_scan]
+        raypack_scan.add(*rays)
 
         # keep n rays for each nb of rebounds, up to max nb of rebounds
 

@@ -34,12 +34,14 @@ class Ray2D:
         """
 
         self.__is_propagated = False
+        self.stop_reason = None
+        self.dist_to_target = None
 
         self.env: Environment2D = env
         self.source: np.ndarray = source
+        self.target: np.ndarray = kwargs.get('target', None)
         self.freq = freq
         self.angle = angle
-        self.stop_reason = None
 
         # Initialise
         self.XZ = np.expand_dims(self.source.copy(), axis=0)
@@ -249,6 +251,11 @@ class Ray2D:
 
         # Generate interpolated path function
         self.calc_z = interpolate.interp1d(self.XZ[:, 0], self.XZ[:, 1], kind='linear')
+
+        # Calculate distance to target
+        if self.target is not None:
+            try: self.dist_to_target = abs(self.target[1] - self.calc_z(self.target[0]))
+            except: self.dist_to_target = np.nan
         
         self.__is_propagated = True
 
@@ -278,28 +285,21 @@ class RayPack2D:
         self.__energy_norm = None
         self.ray_energy = None  # Dict of ray normalised energy unit per frequency
 
-    def add (self, ray: Ray2D, **kwargs):
+    def add (self, *rays: Ray2D):
 
-        # Add ray to database
-        self.rays .append(ray)
-        self.angles[ray.angle] = self.angles[ray.angle] + [ray] if ray.angle in self.angles else [ray]
-        self.freqs[ray.freq] = self.freqs[ray.freq] + [ray] if ray.freq in self.freqs else [ray]
-        self.stop_reasons[ray.stop_reason] = self.stop_reasons[ray.stop_reason] + [ray] if ray.stop_reason in self.stop_reasons else [ray]
-        
-        target = kwargs.get('target', None)
-        if target is not None:
-            try: d = abs(target[1] - ray.calc_z(target[0]))
-            except: d = np.nan
-            self.dist[d] = self.dist[d] + [ray] if d in self.dist else [ray]
+        for ray in rays:
+            # Update counters
+            self.n_rays += 1
+            self.n_angles += 0 if ray.angle in self.angles else 1
+            self.n_freqs += 0 if ray.freq in self.freqs else 1
 
+            # Add ray to database
+            self.rays .append(ray)
+            self.angles[ray.angle] = self.angles[ray.angle] + [ray] if ray.angle in self.angles else [ray]
+            self.freqs[ray.freq] = self.freqs[ray.freq] + [ray] if ray.freq in self.freqs else [ray]
+            self.stop_reasons[ray.stop_reason] = self.stop_reasons[ray.stop_reason] + [ray] if ray.stop_reason in self.stop_reasons else [ray]
+            self.dist[ray.dist_to_target] = self.dist[ray.dist_to_target] + [ray] if ray.dist_to_target in self.dist else [ray]
 
-        # Update counters
-        self.n_rays += 1
-        self.n_angles += 0 if ray.angle in self.angles else 1
-        self.n_freqs += 0 if ray.freq in self.freqs else 1
-        # self.n_rays = len(self.rays)
-        # self.n_angles = len(self.angles)
-        # self.n_freqs = len(self.freqs)
 
     def regen_energy (self):
         # Regenerate normalised ray energy unit
