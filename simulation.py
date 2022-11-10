@@ -294,6 +294,8 @@ class EigenraySim2D (Simulation2D):
                 # DO SORTING STUFF (function?)
         
             print(f'\tRefine #{self.n_refines} mean distance: {np.mean(raypack_refine.dist_sorted)}')
+            # TODO: stop refine if mean distance increases!!! (ponderate with ray energy at target point)
+            # TODO=> ponderate mean distance with ray energy at target point (nb rebounds etc)
 
     # Generate filter => requires > 1 refine iteration and will by default choose the final refine raypack
 
