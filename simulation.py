@@ -189,10 +189,10 @@ class EigenraySim2D (Simulation2D):
         self.init_kwargs = kwargs
 
         # Pack names
-        self.__pack_temp_scan = '__iter0-scan'
+        self.pack_temp_scan = '__iter0-scan'
         self.pack_scan = 'scan'
-        self.__gen_pack_temp_refine = lambda n_refines, ray_id: f'__iter{n_refines}-refine-ray{ray_id}'  # iter3-refine-ray7
-        self.__gen_pack_refine = lambda n_refines: f'refine-{n_refines}'
+        self.gen_pack_temp_refine = lambda n_refines, ray_id: f'__iter{n_refines}-refine-ray{ray_id}'  # iter3-refine-ray7
+        self.gen_pack_refine = lambda n_refines: f'refine-{n_refines}'
 
         self.dist = dict()
 
@@ -222,13 +222,13 @@ class EigenraySim2D (Simulation2D):
         angles = np.linspace(angle_min, angle_max, n_rays_scan)
 
         # Generate temporary raypack
-        self.raypacks[self.__pack_temp_scan] = RayPack2D()
-        raypack_temp_scan = self.raypacks[self.__pack_temp_scan]
+        self.raypacks[self.pack_temp_scan] = RayPack2D()
+        raypack_temp_scan = self.raypacks[self.pack_temp_scan]
 
         # Cast n_rays_scan scanning rays
-        self.cast (self.scan_freq, *angles, pack=self.__pack_temp_scan, target=self.target, **self.init_kwargs)
-        dist_list_sorted = np.sort(list(raypack_temp_scan.dist.keys()))
-        rays = list(itertools.chain.from_iterable( itemgetter(*dist_list_sorted[:10])(raypack_temp_scan.dist) ))  # Get rays from 10 first keys  #TODO: from N first rays (careful: overflow if range extends past nb of keys)
+        self.cast (self.scan_freq, *angles, pack=self.pack_temp_scan, target=self.target, **self.init_kwargs)
+        dist_sorted = raypack_temp_scan.dist_sorted
+        rays = list(itertools.chain.from_iterable( itemgetter(*dist_sorted[:self.n_rays])(raypack_temp_scan.dist) ))  # Get rays from 10 first keys  #TODO: from N first rays (careful: overflow if range extends past nb of keys)
 
         # Generate scan output raypack
         self.raypacks[self.pack_scan] = RayPack2D()
@@ -237,7 +237,11 @@ class EigenraySim2D (Simulation2D):
 
         # keep n rays for each nb of rebounds, up to max nb of rebounds
 
+    def __get_last_pack (self):
+        return self.pack_scan if self.n_refines == 0 else self.gen_pack_refine(self.n_refines)
 
+    def glp (self):
+        return self.__get_last_pack()
 
     def refine (self, **kwargs):
         """
@@ -248,36 +252,56 @@ class EigenraySim2D (Simulation2D):
 
         iterations = kwargs.get('iterations', 1)
 
-        # Load previous raypack
-        pack_prev = self.pack_scan if self.n_refines == 0 else self.__gen_pack_refine(self.n_refines-1)
-        raypack_prev = self.raypacks[pack_prev]
-
-        # Generate new raypack
-        pack_refine = self.__gen_pack_refine(self.n_refines)
-        self.raypacks[pack_refine] = RayPack2D()
-        raypack_refine = self.raypacks[pack_refine]
-
         for i in range(iterations):
-            for ray_id, ray in enumerate():
+
+            # Load previous raypack
+            pack_prev = self.__get_last_pack()
+            raypack_prev = self.raypacks[pack_prev]
+
+
+            # Increment refines counter (first refine has id=1)
+            self.n_refines += 1
+
+            # Generate new raypack
+            pack_refine = self.gen_pack_refine(self.n_refines)
+            self.raypacks[pack_refine] = RayPack2D()
+            raypack_refine = self.raypacks[pack_refine]
+            # print(f'\n#{self.n_refines}: Refining from "{pack_prev}" to "{pack_refine}"')
+
+            for ray_id, ray in enumerate(raypack_prev.rays):
+                # print(f'\tRay {ray_id+1}/{raypack_prev.n_rays}')
+
                 # TODO: IMPORTANT: ALWAYS KEEP RAYS IN SAME ORDER FOR EACH REFINE (CHILD OF RAY 1 IS NEW_RAY 1 ETC)
-                # Increment refines counter (first refine has id=1)
-                self.n_refines += 1
+                # => Either number the rays inside the raypack or avoid the angles overlapping
 
                 # Generate temporary raypack
-                pack_temp = self.__gen_pack_temp_refine(self.n_refines, ray_id)
+                pack_temp = self.gen_pack_temp_refine(self.n_refines, ray_id)
                 self.raypacks[pack_temp] = RayPack2D()
                 raypack_temp = self.raypacks[pack_temp]
                 # IF NO PROGRESS FOR A SPECIFIC RAY: DO SOMETHING ELSE (check dist_new - dist_prev)
 
                 # Cast rays
-                # self.cast (self.scan_freq, *angles, raypack=pack_temp)#, **self.init_kwargs)
+                angles = np.linspace(ray.angle - 0.01, ray.angle + 0.01, 20)
+                self.cast (self.scan_freq, *angles, pack=pack_temp, target=self.target, **self.init_kwargs)  # TODO: pass kwargs?
+
+                # print(raypack_temp.dist_sorted)
+                dmin = raypack_temp.dist_sorted[0]
+                # print(dmin)
+                # print(raypack_temp.dist[dmin])
+                ray_selected = raypack_temp.dist[dmin][0]
+                raypack_refine.add(ray_selected)
 
                 # DO SORTING STUFF (function?)
+        
+            print(f'\tRefine #{self.n_refines} mean distance: {np.mean(raypack_refine.dist_sorted)}')
 
     # Generate filter => requires > 1 refine iteration and will by default choose the final refine raypack
 
+    # Can downsample
+    # def downsample (self):
+    # creates new downsampled pack
 
     def get (self):
         # TODO: rename, etc
-        pack = self.__gen_pack_refine(self.n_refines)
+        pack = self.__get_last_pack()
         raypack = self.raypacks[pack]
