@@ -272,6 +272,7 @@ class RayPack2D:
         self.freqs = dict()  # Dictionary of Ray2D objects indexed by frequency
         self.stop_reasons = dict()  # Dictionary of Ray2D objects indexed by stop reason
         self.dist = dict()
+        self.dist_sorted = None
 
         self.n_rays = 0
         self.n_angles = 0
@@ -300,6 +301,8 @@ class RayPack2D:
             self.stop_reasons[ray.stop_reason] = self.stop_reasons[ray.stop_reason] + [ray] if ray.stop_reason in self.stop_reasons else [ray]
             self.dist[ray.dist_to_target] = self.dist[ray.dist_to_target] + [ray] if ray.dist_to_target in self.dist else [ray]
 
+        self.dist_sorted = np.sort(list(self.dist.keys()))
+
 
     def regen_energy (self):
         # Regenerate normalised ray energy unit
@@ -315,6 +318,7 @@ class RayPack2D:
         result.freqs = self.freqs .copy()
         result.stop_reasons = self.stop_reasons .copy()
         result.dist = self.dist .copy()
+        result.dist_sorted = self.dist_sorted .copy()
 
         result.n_rays = self.n_rays
         result.n_angles = self.n_angles
