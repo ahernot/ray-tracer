@@ -241,9 +241,7 @@ class EigenraySim2D (Simulation2D):
         """
 
         # Calculate scanning angular range (cf README.md)
-        z_avg_ceiling = 0  # TODO
-        z_avg_floor = -1000  # TODO
-        Dz = abs(z_avg_ceiling - z_avg_floor)  # Distance between avg_floor and avg_ceiling
+        Dz = abs(self.env.ceil_avg - self.env.floor_avg)  # Distance between avg_floor and avg_ceiling
         Dx = abs(self.target[0] - self.source[0])  # Horizontal distance between source and target
         Dz_sc = abs(self.source[1])  # Vertical distance between source and avg_ceiling
         Dz_tc = abs(self.target[1])  # Vertical distance between target and avg_ceiling
@@ -312,7 +310,6 @@ class EigenraySim2D (Simulation2D):
                 # Generate temporary refine raypack
                 pack_temp = self.gen_pack_temp_refine(self.n_refines, ray_id)
                 self.raypacks[pack_temp] = RayPack2D()
-                raypack_temp = self.raypacks[pack_temp]
 
                 # Cast rays
                 # cone_angle = self.dz_max * (np.sin(angle) ** 2) / sim_distance  # Angular range around theta which guarantees an arrival vertical displacement lower than self.dz_max
@@ -320,7 +317,9 @@ class EigenraySim2D (Simulation2D):
                 n_rays_refine = 20
                 angles = np.linspace(ray.angle - cone_angle, ray.angle + cone_angle, n_rays_refine)
                 self.cast (self.scan_freq, *angles, pack=pack_temp, target=self.target, **self.init_kwargs)  # TODO: pass kwargs?
-
+                
+                # Select best ray
+                raypack_temp = self.raypacks[pack_temp]
                 dmin = raypack_temp.dist_sorted[0]
                 ray_selected = raypack_temp.dist[dmin][0]  # Select best ray # TODO: only 1? or multiple if same distance?
                 raypack_refine.add(ray_selected)
