@@ -4,6 +4,7 @@
 # TODO: increase pace when far enough away from borders
 # TODO: add a verbose_indent kwargs field to indent verbose when called from Simulation2D with verbose enabled
 # TODO: add an absorption_max criteria (either in mult or in dB)
+# TODO: decouple ray path and frequency: calc_absorption(*freqs) method
 
 # http://www.sengpielaudio.com/calculator-FactorRatioLevelDecibel.htm
 
@@ -31,6 +32,7 @@ class Ray2D:
         :param env: Simulation environment
         :param source: Source point
         :param angle: Casting angle (from horizontal), in radians
+        :param kwargs/target: Target point
         """
 
         self.__is_propagated = False
@@ -63,16 +65,12 @@ class Ray2D:
     def propagate (self, **kwargs):
         """
         Propagate ray
-
-        kwargs
-        :param backprop: Allow backpropagation (default=True)
-        :param calc_c:
-        :param calc_dz_c:
-        :param dx_max:
-        :param dz_max:
-        :param n_steps_max:
-        :param n_rebounds_max: Maximum number of rebounds (default=infinite)
-        :param verbose: Verbose (default=False)
+        :param kwargs/backprop: Allow backpropagation (default=True)
+        :param kwargs/dx_max:
+        :param kwargs/dz_max:
+        :param kwargs/n_steps_max:
+        :param kwargs/n_rebounds_max: Maximum number of rebounds (default=infinite)
+        :param kwargs/verbose: Verbose (default=False)
         """
 
         verbose = kwargs.get('verbose', False)
@@ -258,6 +256,9 @@ class Ray2D:
             except: self.dist_to_target = np.nan
         
         self.__is_propagated = True
+    
+    def reverse (self):
+        pass  # TODO: Ray2D.reverse
 
 
 
