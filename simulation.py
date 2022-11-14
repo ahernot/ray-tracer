@@ -229,7 +229,7 @@ class EigenraySim2D (Simulation2D):
         self.n_refines = 0
         
         # Initial scan        
-        n_rays_scan = self.n_rays * 10  # TODO: default multiplier
+        n_rays_scan = self.n_rays #* 100  # TODO: default multiplier
         self.__scan(n_rays_scan, kwargs.get('scan_angle_min', None), kwargs.get('scan_angle_max', None))
         
 
@@ -241,17 +241,19 @@ class EigenraySim2D (Simulation2D):
         """
 
         # Calculate scanning angular range (cf README.md)
-        Dz = abs(self.env.ceil_avg - self.env.floor_avg)  # Distance between avg_floor and avg_ceiling
+        Dz = abs(self.env.ceil_avg - self.env.floor_avg)  # Distance between avg_floor and avg_ceiling  # TODO: AVERAGES OVER THE COURSE OF THE RAY'S TRAJECTORY (BETWEEN SOURCE AND TARGET)
         Dx = abs(self.target[0] - self.source[0])  # Horizontal distance between source and target
         Dz_sc = abs(self.source[1])  # Vertical distance between source and avg_ceiling
         Dz_tc = abs(self.target[1])  # Vertical distance between target and avg_ceiling
         N = self.n_rebounds_max + 1  # Allow for one extra rebound to account for averaging imprecisions
         if N % 2 == 0:
-            angle_min = angle_min if angle_min else np.arcsin( Dx / (N * Dz - Dz_sc + Dz_tc) )
+            angle_min = angle_min if angle_min else -1 * np.arcsin( Dx / (N * Dz - Dz_sc + Dz_tc) )
             angle_max = angle_max if angle_max else np.arcsin( Dx / (N * Dz + Dz_sc - Dz_tc) )
         elif N % 2 == 1:
-            angle_min = angle_min if angle_min else np.arcsin( Dx / ((N+1) * Dz - Dz_sc - Dz_tc) )
+            angle_min = angle_min if angle_min else -1 * np.arcsin( Dx / ((N+1) * Dz - Dz_sc - Dz_tc) )
             angle_max = angle_max if angle_max else np.arcsin( Dx / ((N-1) * Dz + Dz_sc + Dz_tc) )
+
+        print(f'Scanning using {n_rays_scan} rays between angles {angle_min} and {angle_max}')
 
         # Generate scanning angles
         angles = np.linspace(angle_min, angle_max, n_rays_scan)
@@ -263,12 +265,16 @@ class EigenraySim2D (Simulation2D):
         # Sort and select rays
         raypack_temp_scan = self.raypacks[self.pack_temp_scan]
         dist_sorted = raypack_temp_scan.dist_sorted
+        if np.isnan(dist_sorted[-1]): 
+            dist_sorted = dist_sorted[:-1]
         rays = list(itertools.chain.from_iterable( itemgetter(*dist_sorted[:self.n_rays])(raypack_temp_scan.dist) ))
 
         # Generate scan output raypack
         self.raypacks[self.pack_scan] = RayPack2D()
         raypack_scan = self.raypacks[self.pack_scan]
         raypack_scan.add(*rays)
+
+        print(f'\tScan mean distance: {np.mean(raypack_scan.dist_sorted)}')
 
         
 
@@ -314,7 +320,7 @@ class EigenraySim2D (Simulation2D):
                 # Cast rays
                 # cone_angle = self.dz_max * (np.sin(angle) ** 2) / sim_distance  # Angular range around theta which guarantees an arrival vertical displacement lower than self.dz_max
                 cone_angle = 0.01
-                n_rays_refine = 20
+                n_rays_refine = 5
                 angles = np.linspace(ray.angle - cone_angle, ray.angle + cone_angle, n_rays_refine)
                 self.cast (self.scan_freq, *angles, pack=pack_temp, target=self.target, **self.init_kwargs)  # TODO: pass kwargs?
                 
