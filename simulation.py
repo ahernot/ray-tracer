@@ -2,6 +2,10 @@
 # Copyright Anatole Hernot (Mines Paris), 2022. All rights reserved.
 
 # TODO: Preset with self.env.range_{min/max} instead of extending for each ray? But range is useful for plotting too… so maybe add plot_range_{min/max}?
+# TODO: Calculate number of ray steps using rough max nb of rebounds to never stop midway
+# TODO: # keep n rays for each nb of rebounds, up to max nb of rebounds? wise? idts
+# TODO: verbose with verbose indent
+# if specifying input in n_rebounds_max=0 and kwargs, which one is kept?
 
 import numpy as np
 # import matplotlib.pyplot as plt
@@ -42,6 +46,7 @@ class Simulation2D:
         self.range_min = self.env.range_min
         self.range_max = self.env.range_max
         self.size = self.env.size
+        # TODO: one range and size PER RAYPACK => plotting will fetch the raypack size etc
         self.range_min_plot = np.zeros(2)
         self.range_max_plot = np.zeros(2)
         self.size_plot = np.zeros(2)
@@ -72,6 +77,14 @@ class Simulation2D:
         :param freq: Ray frequency (Hz)
         :param angles: Angles
         :param kwargs/pack: Raypack name
+
+        :param Ray2D.__init__/kwargs/target: Target point
+        :param Ray2D.propagate/kwargs/backprop: Allow backpropagation (default=True)
+        :param Ray2D.propagate/kwargs/dx_max:
+        :param Ray2D.propagate/kwargs/dz_max:
+        :param Ray2D.propagate/kwargs/n_steps_max:
+        :param Ray2D.propagate/kwargs/n_rebounds_max: Maximum number of rebounds (default=infinite)
+        :param Ray2D.propagate/kwargs/verbose: Verbose (default=False)
         """
 
         # Get target raypack
@@ -176,16 +189,26 @@ class Simulation2D:
 
 class EigenraySim2D (Simulation2D):
 
-    def __init__ (self, env: Environment2D, source, target, **kwargs):
+    def __init__ (self, env: Environment2D, source: np.ndarray, target: np.ndarray, n_rebounds_max: int, **kwargs):
         """
         Eigenray simulation
         :param env: Simulation environment
         :param source: Source point
         :param target: Target point
+        :param n_rebounds_max: Maximum number of rebounds
+
         :param kwargs/spectrum: Power spectrum
         :param kwargs/scan_freq: Scanning frequency (doesn't affect ray path)
-        """
+        :param kwargs/n_rays: Number of rays (can be exceeded if rays have the same distance)
+        :param kwargs/scan_angle_min: Override automatic min scan angle
+        :param kwargs/scan_angle_max: Override automatic max scan angle
 
+        :param Ray2D.propagate/kwargs/backprop: Allow backpropagation (default=True)
+        :param Ray2D.propagate/kwargs/dx_max:
+        :param Ray2D.propagate/kwargs/dz_max:
+        :param Ray2D.propagate/kwargs/n_steps_max:
+        :param Ray2D.propagate/kwargs/verbose: Verbose (default=False)
+        """
         self.init_kwargs = kwargs
 
         # Pack names
@@ -194,113 +217,118 @@ class EigenraySim2D (Simulation2D):
         self.gen_pack_temp_refine = lambda n_refines, ray_id: f'__iter{n_refines}-refine-ray{ray_id}'  # iter3-refine-ray7
         self.gen_pack_refine = lambda n_refines: f'refine-{n_refines}'
 
-        self.dist = dict()
-
+        # Initialise Simulation2D
         super(EigenraySim2D, self).__init__(env, source, pack_default=None, **kwargs)
+
+        # Initialise EigenraySim2D
         self.target: np.ndarray = target
+        self.n_rebounds_max = n_rebounds_max
         self.scan_freq = kwargs.get('scan_freq', 1)
-        
-        # Initial scan
         self.n_rays: int = kwargs.get('n_rays', 100)
-        n_rays_scan = self.n_rays * 10  # TODO: default multiplier
-        self.__scan(n_rays_scan)  # <= lacking angular range parameters, resolution, nb of rays to keep, distance threshold, etc.
-
-        # 1. Scan (within reasonable angular range)
-        # 2. Refine (iterations)
-        # Generate one raypack per stage
-
-        # Refinement stages counter
+        self.dist = dict()
         self.n_refines = 0
+        
+        # Initial scan        
+        n_rays_scan = self.n_rays * 10  # TODO: default multiplier
+        self.__scan(n_rays_scan, kwargs.get('scan_angle_min', None), kwargs.get('scan_angle_max', None))
+        
 
 
-    def __scan (self, n_rays_scan):
-        # TODO: __scan (self, n_rays, angle_min, angle_max) with separate processing function taking average of env and nb of rebounds (+1)
+    def __scan (self, n_rays_scan, angle_min = None, angle_max = None):
+        """
+        Initial scan (broad sweep)
+        :param n_rays_scan: Number of scanning rays (higher is better)
+        """
 
-        ### TODO: ANGULAR RANGE
-        angle_min = -1 * np.pi / 2 + 0.01
-        angle_max = np.pi / 2 - 0.01
+        # Calculate scanning angular range (cf README.md)
+        z_avg_ceiling = 0  # TODO
+        z_avg_floor = -1000  # TODO
+        Dz = abs(z_avg_ceiling - z_avg_floor)  # Distance between avg_floor and avg_ceiling
+        Dx = abs(self.target[0] - self.source[0])  # Horizontal distance between source and target
+        Dz_sc = abs(self.source[1])  # Vertical distance between source and avg_ceiling
+        Dz_tc = abs(self.target[1])  # Vertical distance between target and avg_ceiling
+        N = self.n_rebounds_max + 1  # Allow for one extra rebound to account for averaging imprecisions
+        if N % 2 == 0:
+            angle_min = angle_min if angle_min else np.arcsin( Dx / (N * Dz - Dz_sc + Dz_tc) )
+            angle_max = angle_max if angle_max else np.arcsin( Dx / (N * Dz + Dz_sc - Dz_tc) )
+        elif N % 2 == 1:
+            angle_min = angle_min if angle_min else np.arcsin( Dx / ((N+1) * Dz - Dz_sc - Dz_tc) )
+            angle_max = angle_max if angle_max else np.arcsin( Dx / ((N-1) * Dz + Dz_sc + Dz_tc) )
+
+        # Generate scanning angles
         angles = np.linspace(angle_min, angle_max, n_rays_scan)
 
-        ### IMPORTED FROM DATA2021-PROPAGATION-SON
-        # theta = np.pi / 2
-        # cone_angle = np.pi/2 - np.arctan ( sim_distance / ((self.rebounds_nb_max-1) * self.rays_env.depth_avg - self.z_target - self.rays_env.z0) )
-        # if self.verbose: print(f'{self.vi}\tangle: {round(np.pi/2 * 180 / 3.14, 2)}deg\tcone_angle: {round(cone_angle * 180 / 3.14, 2)}deg\trays_nb: {rays_sweep}')
-        ###
-
-        # Generate temporary raypack
-        self.raypacks[self.pack_temp_scan] = RayPack2D()
-        raypack_temp_scan = self.raypacks[self.pack_temp_scan]
-
         # Cast n_rays_scan scanning rays
-        self.cast (self.scan_freq, *angles, pack=self.pack_temp_scan, target=self.target, **self.init_kwargs)
+        self.raypacks[self.pack_temp_scan] = RayPack2D()
+        self.cast (self.scan_freq, *angles, pack=self.pack_temp_scan, target=self.target, n_rebounds_max=self.n_rebounds_max, **self.init_kwargs)
+        
+        # Sort and select rays
+        raypack_temp_scan = self.raypacks[self.pack_temp_scan]
         dist_sorted = raypack_temp_scan.dist_sorted
-        rays = list(itertools.chain.from_iterable( itemgetter(*dist_sorted[:self.n_rays])(raypack_temp_scan.dist) ))  # Get rays from 10 first keys  #TODO: from N first rays (careful: overflow if range extends past nb of keys)
+        rays = list(itertools.chain.from_iterable( itemgetter(*dist_sorted[:self.n_rays])(raypack_temp_scan.dist) ))
 
         # Generate scan output raypack
         self.raypacks[self.pack_scan] = RayPack2D()
         raypack_scan = self.raypacks[self.pack_scan]
         raypack_scan.add(*rays)
 
-        # keep n rays for each nb of rebounds, up to max nb of rebounds
-
-    def __get_last_pack (self):
-        return self.pack_scan if self.n_refines == 0 else self.gen_pack_refine(self.n_refines)
-
-    def glp (self):
-        return self.__get_last_pack()
+        
 
     def refine (self, **kwargs):
         """
-        Refine
-        :param ?:
+        Refine rays
+        # TODO: IMPORTANT: ALWAYS KEEP RAYS IN SAME ORDER FOR EACH REFINE (CHILD OF RAY 1 IS NEW_RAY 1 ETC)
+        # => Either number the rays inside the raypack or avoid the angles overlapping
+        # IF NO PROGRESS FOR A SPECIFIC RAY: DO SOMETHING ELSE (check dist_new - dist_prev)
+        # TODO: stop refine if mean distance increases!!! (ponderate with ray energy at target point)
+        # TODO => ponderate mean distance with ray energy at target point (nb rebounds etc)
+
         :param kwargs/iterations: Number of back-to-back refine iterations
+        :param Ray2D.propagate/kwargs/backprop: Allow backpropagation (default=True)
+        :param Ray2D.propagate/kwargs/dx_max:
+        :param Ray2D.propagate/kwargs/dz_max:
+        :param Ray2D.propagate/kwargs/n_steps_max:
+        :param Ray2D.propagate/kwargs/verbose: Verbose (default=False)
         """
 
         iterations = kwargs.get('iterations', 1)
-
         for i in range(iterations):
 
             # Load previous raypack
-            pack_prev = self.__get_last_pack()
+            pack_prev = self.get_last_pack()
             raypack_prev = self.raypacks[pack_prev]
-
-
             # Increment refines counter (first refine has id=1)
             self.n_refines += 1
-
             # Generate new raypack
             pack_refine = self.gen_pack_refine(self.n_refines)
             self.raypacks[pack_refine] = RayPack2D()
             raypack_refine = self.raypacks[pack_refine]
-            # print(f'\n#{self.n_refines}: Refining from "{pack_prev}" to "{pack_refine}"')
 
+
+            # print(f'\n#{self.n_refines}: Refining from "{pack_prev}" to "{pack_refine}"')
             for ray_id, ray in enumerate(raypack_prev.rays):
                 # print(f'\tRay {ray_id+1}/{raypack_prev.n_rays}')
-                # TODO: IMPORTANT: ALWAYS KEEP RAYS IN SAME ORDER FOR EACH REFINE (CHILD OF RAY 1 IS NEW_RAY 1 ETC)
-                # => Either number the rays inside the raypack or avoid the angles overlapping
 
-                # Generate temporary raypack
+                # Generate temporary refine raypack
                 pack_temp = self.gen_pack_temp_refine(self.n_refines, ray_id)
                 self.raypacks[pack_temp] = RayPack2D()
                 raypack_temp = self.raypacks[pack_temp]
-                # IF NO PROGRESS FOR A SPECIFIC RAY: DO SOMETHING ELSE (check dist_new - dist_prev)
 
                 # Cast rays
-                angles = np.linspace(ray.angle - 0.01, ray.angle + 0.01, 20)
+                # cone_angle = self.dz_max * (np.sin(angle) ** 2) / sim_distance  # Angular range around theta which guarantees an arrival vertical displacement lower than self.dz_max
+                cone_angle = 0.01
+                n_rays_refine = 20
+                angles = np.linspace(ray.angle - cone_angle, ray.angle + cone_angle, n_rays_refine)
                 self.cast (self.scan_freq, *angles, pack=pack_temp, target=self.target, **self.init_kwargs)  # TODO: pass kwargs?
 
-                # print(raypack_temp.dist_sorted)
                 dmin = raypack_temp.dist_sorted[0]
-                # print(dmin)
-                # print(raypack_temp.dist[dmin])
-                ray_selected = raypack_temp.dist[dmin][0]
+                ray_selected = raypack_temp.dist[dmin][0]  # Select best ray # TODO: only 1? or multiple if same distance?
                 raypack_refine.add(ray_selected)
 
-                # DO SORTING STUFF (function?)
         
             print(f'\tRefine #{self.n_refines} mean distance: {np.mean(raypack_refine.dist_sorted)}')
-            # TODO: stop refine if mean distance increases!!! (ponderate with ray energy at target point)
-            # TODO=> ponderate mean distance with ray energy at target point (nb rebounds etc)
+
+
 
     # Generate filter => requires > 1 refine iteration and will by default choose the final refine raypack
 
@@ -308,7 +336,11 @@ class EigenraySim2D (Simulation2D):
     # def downsample (self):
     # creates new downsampled pack
 
+    def get_last_pack (self):
+        """ Get best raypack """
+        return self.pack_scan if self.n_refines == 0 else self.gen_pack_refine(self.n_refines)
+
     def get (self):
         # TODO: rename, etc
-        pack = self.__get_last_pack()
+        pack = self.get_last_pack()
         raypack = self.raypacks[pack]
