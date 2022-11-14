@@ -1,4 +1,4 @@
-# 2D Ray Propagation Model (v3.1)
+# 2D Ray Propagation Model (v3.2)
 # Copyright Anatole Hernot (Mines Paris), 2022. All rights reserved.
 
 # TODO: increase pace when far enough away from borders
