@@ -173,7 +173,7 @@ class Simulation2D:
         pass
 
 
-################ TODO: use EigenRayPack2D instead of RayPack2D
+
 class EigenraySim2D (Simulation2D):
 
     def __init__ (self, env: Environment2D, source, target, **kwargs):
@@ -220,6 +220,12 @@ class EigenraySim2D (Simulation2D):
         angle_min = -1 * np.pi / 2 + 0.01
         angle_max = np.pi / 2 - 0.01
         angles = np.linspace(angle_min, angle_max, n_rays_scan)
+
+        ### IMPORTED FROM DATA2021-PROPAGATION-SON
+        # theta = np.pi / 2
+        # cone_angle = np.pi/2 - np.arctan ( sim_distance / ((self.rebounds_nb_max-1) * self.rays_env.depth_avg - self.z_target - self.rays_env.z0) )
+        # if self.verbose: print(f'{self.vi}\tangle: {round(np.pi/2 * 180 / 3.14, 2)}deg\tcone_angle: {round(cone_angle * 180 / 3.14, 2)}deg\trays_nb: {rays_sweep}')
+        ###
 
         # Generate temporary raypack
         self.raypacks[self.pack_temp_scan] = RayPack2D()
@@ -270,7 +276,6 @@ class EigenraySim2D (Simulation2D):
 
             for ray_id, ray in enumerate(raypack_prev.rays):
                 # print(f'\tRay {ray_id+1}/{raypack_prev.n_rays}')
-
                 # TODO: IMPORTANT: ALWAYS KEEP RAYS IN SAME ORDER FOR EACH REFINE (CHILD OF RAY 1 IS NEW_RAY 1 ETC)
                 # => Either number the rays inside the raypack or avoid the angles overlapping
 
