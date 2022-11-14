@@ -125,7 +125,7 @@ class Simulation2D:
         raypack = self.raypacks[pack]
 
         # Initialise heatmap
-        heatmap_shape = np.ceil(self.size_plot/res).astype(int) + 1  # +1 because the downsampling of the coordinates is right bound inclusive
+        heatmap_shape = np.ceil(raypack.size_plot/res).astype(int) + 1  # +1 because the downsampling of the coordinates is right bound inclusive
         heatmap_full = np.zeros((heatmap_shape))
 
         for ray in raypack.rays:
@@ -272,7 +272,10 @@ class EigenraySim2D (Simulation2D):
         self.raypacks[self.pack_scan] = RayPack2D()
         raypack_scan = self.raypacks[self.pack_scan]
         raypack_scan.add(*rays)
-        # Update default raypack
+        # Update scan raypack
+        self._Simulation2D__distribute_spectral_power(self.pack_scan)
+        raypack_scan.regen_energy()
+        # Set default raypack
         self.pack_default = self.pack_scan
 
         self.dist_avg = np.mean(raypack_scan.dist_sorted)
@@ -308,7 +311,7 @@ class EigenraySim2D (Simulation2D):
                 break
 
             # Load previous raypack
-            pack_prev = self.get_last_pack()
+            pack_prev = self.__get_last_pack()
             raypack_prev = self.raypacks[pack_prev]
             # Increment refines counter (first refine has id=1)
             self.n_refines += 1  # TODO: better log of refine steps (incl. parameters and number of cast and selected) for __repr__
@@ -328,12 +331,19 @@ class EigenraySim2D (Simulation2D):
                 angle_max = ray.angle + cone_half_angle
                 angles = np.linspace(angle_min, angle_max, n_rays)
                 self.cast (self.scan_freq, *angles, pack=pack_temp, target=self.target, **self.init_kwargs)
-                raypack_temp.add(ray)  # Add initial ray (add after cast so that frequency is already generated)
+
+                # Add initial ray (add after cast so that frequency is already generated)
+                raypack_temp.add(ray)
+                raypack_temp.regen_energy()
                 
                 # Select best ray
                 dmin = raypack_temp.dist_sorted[0]
                 ray_selected = raypack_temp.dist[dmin][0]  # Select best ray # TODO: only 1? or multiple if same distance?
                 raypack_refine.add(ray_selected)
+
+            # Update refine raypack
+            self._Simulation2D__distribute_spectral_power(pack_refine)
+            raypack_refine.regen_energy()
 
             # Update angular precision (precision cone half-angle)
             self.__angular_precision /= n_rays
@@ -341,8 +351,11 @@ class EigenraySim2D (Simulation2D):
 
             print(f'\tRefine #{self.n_refines} mean distance: {self.dist_avg}')  # if self.verbose
 
-        # Update default raypack
+        # Set default raypack
         self.pack_default = pack_refine
+
+    def __get_last_pack (self):
+        return self.pack_scan if self.n_refines == 0 else self.gen_pack_refine(self.n_refines)
 
 
     # TODO: Generate filter => requires > 1 refine iteration and will by default choose the final refine raypack
