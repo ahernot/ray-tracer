@@ -78,7 +78,7 @@ class Ray2D:
         self.verbose_depth_max = kwargs.get('verbose_depth_max', 0)
         self.verbose_depth =  kwargs.get('verbose_depth', 0)
         if self.verbose: self.verbose_next = (self.verbose_depth < self.verbose_depth_max) or (self.verbose_depth_max == -1)
-        self.__vi = '\t' * self.verbose_depth
+        self.__vi = '\t' * self.verbose_depth + self.__class__.__name__ + ': '
 
         if self.__is_propagated:
             if self.verbose: print(f'{self.__vi}ERROR: Ray already propagated')

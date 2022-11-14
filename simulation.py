@@ -37,7 +37,7 @@ class Simulation2D:
         self.verbose_depth_max = kwargs.get('verbose_depth_max', 0)
         self.verbose_depth =  kwargs.get('verbose_depth', 0)  # TODO: if verbose_depth > verbose_depth_max for a function (while applying verbose_depth++ for a deeper function each step) then set verbose=False regardless
         if self.verbose: self.verbose_next = (self.verbose_depth < self.verbose_depth_max) or (self.verbose_depth_max == -1)
-        self.__vi = '\t' * self.verbose_depth
+        self.__vi = '\t' * self.verbose_depth + self.__class__.__name__ + ': '
         
         # Get simulation objects
         self.env = env
