@@ -156,6 +156,7 @@ class Simulation2D:
         # Get target raypack
         pack = kwargs.get('pack', self.pack_default)
         raypack = self.raypacks[pack]
+        kwargs.pop('pack', None)
 
         for ray in raypack.rays:
             ray.plot(fig, **kwargs)
