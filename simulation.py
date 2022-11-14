@@ -158,7 +158,7 @@ class Simulation2D:
         raypack = self.raypacks[pack]
 
         for ray in raypack.rays:
-            ray.plot(fig)
+            ray.plot(fig, **kwargs)
         self.env.plot(fig, c='red')
 
     def save (self):
@@ -227,8 +227,6 @@ class EigenraySim2D (Simulation2D):
         # Initial scan        
         self.n_rays_scan = kwargs.get('n_rays_scan', self.n_rays * 10)  # TODO: default multiplier
         self.__scan(kwargs.get('scan_angle_min', None), kwargs.get('scan_angle_max', None))
-        
-
 
     def __scan (self, angle_min = None, angle_max = None):
         """
@@ -276,8 +274,6 @@ class EigenraySim2D (Simulation2D):
 
         self.dist_avg = np.mean(raypack_scan.dist_sorted)
         print(f'\tScan mean distance: {self.dist_avg}')  # if self.verbose
-
-        
 
     def refine (self, **kwargs):
         """
@@ -342,10 +338,6 @@ class EigenraySim2D (Simulation2D):
 
             print(f'\tRefine #{self.n_refines} mean distance: {self.dist_avg}')  # if self.verbose
 
-        
-            
-
-
 
     # Generate filter => requires > 1 refine iteration and will by default choose the final refine raypack
 
@@ -354,7 +346,7 @@ class EigenraySim2D (Simulation2D):
     # creates new downsampled pack
 
     def get_last_pack (self):
-        """ Get best raypack """
+        """ Get best (last) raypack """
         return self.pack_scan if self.n_refines == 0 else self.gen_pack_refine(self.n_refines)
 
     def get (self):

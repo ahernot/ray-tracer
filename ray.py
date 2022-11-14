@@ -58,9 +58,9 @@ class Ray2D:
     def __repr__ (self):
         return f'Ray of frequency {self.freq}'  # TODO: improve repr
 
-    def plot (self, fig):
+    def plot (self, fig, **kwargs):
         if self.__is_propagated:
-            plt.plot(self.XZ[:,0], self.XZ[:,1], figure=fig)
+            plt.plot(self.XZ[:,0], self.XZ[:,1], figure=fig, **kwargs)
 
     def propagate (self, **kwargs):
         """
