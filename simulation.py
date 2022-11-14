@@ -4,8 +4,6 @@
 # TODO: Preset with self.env.range_{min/max} instead of extending for each ray? But range is useful for plotting too… so maybe add plot_range_{min/max}?
 # TODO: Calculate number of ray steps using rough max nb of rebounds to never stop midway
 # TODO: # keep n rays for each nb of rebounds, up to max nb of rebounds? wise? idts
-# TODO: verbose with verbose indent
-# if specifying input in n_rebounds_max=0 and kwargs, which one is kept?
 # TODO: always keep the rays in the same order after each refine: useful?
 
 import numpy as np
@@ -29,7 +27,17 @@ class Simulation2D:
         :param source: Source point
         :param kwargs/spectrum: Power spectrum
         :param kwargs/pack_default: Default pack name (use None to manually create and assign raypacks)
+        :param kwargs/verbose: Verbose (default=False)
+        :param kwargs/verbose_depth: Verbose depth
+        :param kwargs/verbose_depth_max: Verbose max depth
         """
+
+        # Verbose
+        self.verbose = kwargs.get('verbose', False)
+        self.verbose_depth_max = kwargs.get('verbose_depth_max', 0)
+        self.verbose_depth =  kwargs.get('verbose_depth', 0)  # TODO: if verbose_depth > verbose_depth_max for a function (while applying verbose_depth++ for a deeper function each step) then set verbose=False regardless
+        if self.verbose: self.verbose_next = (self.verbose_depth < self.verbose_depth_max) or (self.verbose_depth_max == -1)
+        self.__vi = '\t' * self.verbose_depth
         
         # Get simulation objects
         self.env = env
@@ -47,7 +55,6 @@ class Simulation2D:
         self.range_min = self.env.range_min
         self.range_max = self.env.range_max
         self.size = self.env.size
-        
 
     def __repr__ (self):  # TODO: to improve later
         stop_reasons_formatted = '\n'.join([f'\t{stop_reason}: {len(self.stop_reasons[stop_reason])}' for stop_reason in self.stop_reasons])
@@ -97,6 +104,7 @@ class Simulation2D:
 
         for angle in angles:
             # Generate ray and add to simulation
+            kwargs.update(verbose=self.verbose_next, verbose_depth=self.verbose_depth+1, verbose_depth_max=self.verbose_depth_max)
             ray = Ray2D (self.env, self.source, freq, angle, **kwargs)
             ray.propagate(**kwargs)
             raypack.add(ray)
@@ -189,8 +197,6 @@ class EigenraySim2D (Simulation2D):
         :param kwargs/scan_angle_min: Override automatic min scan angle
         :param kwargs/scan_angle_max: Override automatic max scan angle
         :param kwargs/precision_cutoff: Focusing precision cutoff (in meters)
-        :param kwargs/verbose: Verbose (default=False)
-        :param kwargs/verbose_depth_max: Verbose max depth
 
         :param Ray2D.propagate/kwargs/backprop: Allow backpropagation (default=True)
         :param Ray2D.propagate/kwargs/dx_max:
@@ -219,11 +225,6 @@ class EigenraySim2D (Simulation2D):
         self.n_refines = 0
         self.__angular_precision = None
         self.precision_cutoff = kwargs.get('precision_cutoff', 0.1)  # in meters
-
-        # TODO: move to Simulation2D
-        self.verbose = kwargs.get('verbose', False)
-        self.verbose_depth_max = kwargs.get('verbose_depth_max', 0)
-        self.verbose_depth = 0  # TODO: if verbose_depth > verbose_depth_max for a function (while applying verbose_depth++ for a deeper function each step) then set verbose=False regardless
 
         # Initial scan        
         self.n_rays_scan = kwargs.get('n_rays_scan', self.n_rays * 10)  # TODO: default multiplier
@@ -254,7 +255,7 @@ class EigenraySim2D (Simulation2D):
             angle_max = angle_max if angle_max else np.arcsin( Dx / ((N-1) * Dz + Dz_sc + Dz_tc) )
 
         # Calculate angular precision
-        if self.verbose: print(f'Scanning using {self.n_rays_scan} rays between angles {angle_min} and {angle_max}')
+        if self.verbose: print(f'{self._Simulation2D__vi}Scanning using {self.n_rays_scan} rays between angles {angle_min} and {angle_max}')
         self.__angular_precision = (angle_max - angle_min) / self.n_rays_scan# / 2  # Cone half-angle
 
         # Cast scanning rays
@@ -279,14 +280,11 @@ class EigenraySim2D (Simulation2D):
         self.pack_default = self.pack_scan
 
         self.dist_avg = np.mean(raypack_scan.dist_sorted)
-        print(f'\tScan mean distance: {self.dist_avg}')  # if self.verbose
+        if self.verbose: print(f'{self._Simulation2D__vi}Scan mean distance: {self.dist_avg}')
 
     def refine (self, **kwargs):
         """
         Refine rays
-        # TODO: stop refine if mean distance increases!!! (check dist_new - dist_prev)
-        # TODO => ponderate mean distance with ray energy at target point (nb rebounds etc)
-
         :param kwargs/cone_half_angle:
         :param kwargs/n_rays:
         :param kwargs/iterations: Number of back-to-back refine iterations
@@ -307,7 +305,7 @@ class EigenraySim2D (Simulation2D):
 
             # Precision check
             if self.dist_avg <= self.precision_cutoff and not force_refine:
-                if self.verbose: print('Target precision reached')
+                if self.verbose: print(f'{self._Simulation2D__vi}Target precision reached')
                 break
 
             # Load previous raypack
@@ -349,7 +347,7 @@ class EigenraySim2D (Simulation2D):
             self.__angular_precision /= n_rays
             self.dist_avg = np.mean(raypack_refine.dist_sorted)
 
-            print(f'\tRefine #{self.n_refines} mean distance: {self.dist_avg}')  # if self.verbose
+            if self.verbose: print(f'{self._Simulation2D__vi}Refine #{self.n_refines} mean distance: {self.dist_avg}')  # if self.verbose
 
         # Set default raypack
         self.pack_default = pack_refine
