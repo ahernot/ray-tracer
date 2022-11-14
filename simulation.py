@@ -1,4 +1,4 @@
-# 2D Ray Simulation (v1.2)
+# 2D Ray Simulation (v1.3)
 # Copyright Anatole Hernot (Mines Paris), 2022. All rights reserved.
 
 # TODO: Preset with self.env.range_{min/max} instead of extending for each ray? But range is useful for plotting too… so maybe add plot_range_{min/max}?
