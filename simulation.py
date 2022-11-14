@@ -47,10 +47,7 @@ class Simulation2D:
         self.range_min = self.env.range_min
         self.range_max = self.env.range_max
         self.size = self.env.size
-        # TODO: one range and size PER RAYPACK => plotting will fetch the raypack size etc
-        self.range_min_plot = np.zeros(2)
-        self.range_max_plot = np.zeros(2)
-        self.size_plot = np.zeros(2)
+        
 
     def __repr__ (self):  # TODO: to improve later
         stop_reasons_formatted = '\n'.join([f'\t{stop_reason}: {len(self.stop_reasons[stop_reason])}' for stop_reason in self.stop_reasons])
@@ -99,27 +96,13 @@ class Simulation2D:
             redistribute_power = True
 
         for angle in angles:
-
-            # Generate ray
+            # Generate ray and add to simulation
             ray = Ray2D (self.env, self.source, freq, angle, **kwargs)
             ray.propagate(**kwargs)
-            
-            # Add ray to simulation
             raypack.add(ray)
 
-            # Update plot range
-            if ray.range_min[0] < self.range_min_plot[0]: self.range_min_plot[0] = ray.range_min[0]
-            if ray.range_min[1] < self.range_min_plot[1]: self.range_min_plot[1] = ray.range_min[1]
-            if ray.range_max[0] > self.range_max_plot[0]: self.range_max_plot[0] = ray.range_max[0]
-            if ray.range_max[1] > self.range_max_plot[1]: self.range_max_plot[1] = ray.range_max[1]
-
-        # Update plot size
-        self.size_plot = self.range_max_plot - self.range_min_plot
-
-        # Redistribute spectral power (if new frequency added)
-        if redistribute_power:
-            self.__distribute_spectral_power(pack)
-        # Regenerate ray unit energy
+        # Redistribute spectral power (if new frequency added) and regenerate ray unit energy
+        if redistribute_power: self.__distribute_spectral_power(pack)
         raypack.regen_energy()
 
     def heatmap (self, **kwargs):

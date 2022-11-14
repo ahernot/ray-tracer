@@ -277,6 +277,10 @@ class RayPack2D:
         self.dist_sorted = None
         self.freqs_sorted = None
 
+        self.range_min_plot = np.zeros(2)
+        self.range_max_plot = np.zeros(2)
+        self.size_plot = np.zeros(2)
+
         self.n_rays = 0
         self.n_angles = 0
         self.n_freqs = 0
@@ -304,6 +308,16 @@ class RayPack2D:
             self.stop_reasons[ray.stop_reason] = self.stop_reasons[ray.stop_reason] + [ray] if ray.stop_reason in self.stop_reasons else [ray]
             self.dist[ray.dist_to_target] = self.dist[ray.dist_to_target] + [ray] if ray.dist_to_target in self.dist else [ray]
 
+            # Update plot range
+            if ray.range_min[0] < self.range_min_plot[0]: self.range_min_plot[0] = ray.range_min[0]
+            if ray.range_min[1] < self.range_min_plot[1]: self.range_min_plot[1] = ray.range_min[1]
+            if ray.range_max[0] > self.range_max_plot[0]: self.range_max_plot[0] = ray.range_max[0]
+            if ray.range_max[1] > self.range_max_plot[1]: self.range_max_plot[1] = ray.range_max[1]
+
+        # Update plot size
+        self.size_plot = self.range_max_plot - self.range_min_plot
+
+        # Update sorted arrays
         self.dist_sorted = np.sort(list(self.dist.keys()))
         self.angles_sorted = np.sort(list(self.angles.keys()))
         self.freqs_sorted = np.sort(list(self.freqs.keys()))
@@ -312,31 +326,3 @@ class RayPack2D:
         # Regenerate normalised ray energy unit
         self.__energy_norm = self.energy_total / np.sum([len(self.freqs[freq]) * self.spectrum_distrib[freq] for freq in self.freqs])
         self.ray_energy = {freq: self.spectrum_distrib[freq] * self.__energy_norm for freq in self.freqs}
-
-
-    def __copy__ (self):
-        cls = self.__class__
-        result = cls.__new__(cls)
-
-        result.rays = self.rays .copy()
-        result.angles = self.angles .copy()
-        result.freqs = self.freqs .copy()
-        result.stop_reasons = self.stop_reasons .copy()
-        result.dist = self.dist .copy()
-        result.angles_sorted = self.angles_sorted .copy()
-        result.dist_sorted = self.dist_sorted .copy()
-        result.freqs_sorted = self.freqs_sorted .copy()
-
-        result.n_rays = self.n_rays
-        result.n_angles = self.n_angles
-        result.n_freqs = self.n_freqs
-
-        result.spectrum_vals = self.spectrum_vals .copy()
-        result.spectrum_total = self.spectrum_total
-        result.spectrum_distrib = self.spectrum_distrib
-
-        result.energy_total = self.energy_total
-        result.__energy_norm = self.__energy_norm
-        result.ray_energy = self.ray_energy
-
-        return result
