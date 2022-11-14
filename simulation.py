@@ -6,6 +6,7 @@
 # TODO: # keep n rays for each nb of rebounds, up to max nb of rebounds? wise? idts
 # TODO: verbose with verbose indent
 # if specifying input in n_rebounds_max=0 and kwargs, which one is kept?
+# TODO: always keep the rays in the same order after each refine: useful?
 
 import numpy as np
 # import matplotlib.pyplot as plt
@@ -200,8 +201,12 @@ class EigenraySim2D (Simulation2D):
         :param kwargs/spectrum: Power spectrum
         :param kwargs/scan_freq: Scanning frequency (doesn't affect ray path)
         :param kwargs/n_rays: Number of rays (can be exceeded if rays have the same distance)
+        :param n_rays_scan: Number of scanning rays (higher is better)
         :param kwargs/scan_angle_min: Override automatic min scan angle
         :param kwargs/scan_angle_max: Override automatic max scan angle
+        :param kwargs/precision_cutoff: Focusing precision cutoff (in meters)
+        :param kwargs/verbose: Verbose (default=False)
+        :param kwargs/verbose_depth_max: Verbose max depth
 
         :param Ray2D.propagate/kwargs/backprop: Allow backpropagation (default=True)
         :param Ray2D.propagate/kwargs/dx_max:
@@ -224,20 +229,33 @@ class EigenraySim2D (Simulation2D):
         self.target: np.ndarray = target
         self.n_rebounds_max = n_rebounds_max
         self.scan_freq = kwargs.get('scan_freq', 1)
-        self.n_rays: int = kwargs.get('n_rays', 100)
+        self.n_rays: int = kwargs.get('n_rays', 25)
         self.dist = dict()
+        self.dist_avg = None
         self.n_refines = 0
-        
+        self.__angular_precision = None
+        self.precision_cutoff = kwargs.get('precision_cutoff', 0.1)  # in meters
+
+        # TODO: move to Simulation2D
+        self.verbose = kwargs.get('verbose', False)
+        self.verbose_depth_max = kwargs.get('verbose_depth_max', 0)
+        self.verbose_depth = 0  # TODO: if verbose_depth > verbose_depth_max for a function (while applying verbose_depth++ for a deeper function each step) then set verbose=False regardless
+
         # Initial scan        
-        n_rays_scan = self.n_rays #* 100  # TODO: default multiplier
-        self.__scan(n_rays_scan, kwargs.get('scan_angle_min', None), kwargs.get('scan_angle_max', None))
+        self.n_rays_scan = kwargs.get('n_rays_scan', self.n_rays * 10)  # TODO: default multiplier
+        self.__scan(kwargs.get('scan_angle_min', None), kwargs.get('scan_angle_max', None))
         
 
 
-    def __scan (self, n_rays_scan, angle_min = None, angle_max = None):
+    def __scan (self, angle_min = None, angle_max = None):
         """
         Initial scan (broad sweep)
-        :param n_rays_scan: Number of scanning rays (higher is better)
+        :param angle_min:
+        :param angle_max:
+        :param Ray2D.propagate/kwargs/backprop: Allow backpropagation (default=True)
+        :param Ray2D.propagate/kwargs/dx_max:
+        :param Ray2D.propagate/kwargs/dz_max:
+        :param Ray2D.propagate/kwargs/n_steps_max:
         """
 
         # Calculate scanning angular range (cf README.md)
@@ -253,20 +271,19 @@ class EigenraySim2D (Simulation2D):
             angle_min = angle_min if angle_min else -1 * np.arcsin( Dx / ((N+1) * Dz - Dz_sc - Dz_tc) )
             angle_max = angle_max if angle_max else np.arcsin( Dx / ((N-1) * Dz + Dz_sc + Dz_tc) )
 
-        print(f'Scanning using {n_rays_scan} rays between angles {angle_min} and {angle_max}')
+        # Calculate angular precision
+        if self.verbose: print(f'Scanning using {self.n_rays_scan} rays between angles {angle_min} and {angle_max}')
+        self.__angular_precision = (angle_max - angle_min) / self.n_rays_scan# / 2  # Cone half-angle
 
-        # Generate scanning angles
-        angles = np.linspace(angle_min, angle_max, n_rays_scan)
-
-        # Cast n_rays_scan scanning rays
+        # Cast scanning rays
         self.raypacks[self.pack_temp_scan] = RayPack2D()
+        angles = np.linspace(angle_min, angle_max, self.n_rays_scan)
         self.cast (self.scan_freq, *angles, pack=self.pack_temp_scan, target=self.target, n_rebounds_max=self.n_rebounds_max, **self.init_kwargs)
         
         # Sort and select rays
         raypack_temp_scan = self.raypacks[self.pack_temp_scan]
         dist_sorted = raypack_temp_scan.dist_sorted
-        if np.isnan(dist_sorted[-1]): 
-            dist_sorted = dist_sorted[:-1]
+        if np.isnan(dist_sorted[-1]): dist_sorted = dist_sorted[:-1]
         rays = list(itertools.chain.from_iterable( itemgetter(*dist_sorted[:self.n_rays])(raypack_temp_scan.dist) ))
 
         # Generate scan output raypack
@@ -274,64 +291,76 @@ class EigenraySim2D (Simulation2D):
         raypack_scan = self.raypacks[self.pack_scan]
         raypack_scan.add(*rays)
 
-        print(f'\tScan mean distance: {np.mean(raypack_scan.dist_sorted)}')
+        self.dist_avg = np.mean(raypack_scan.dist_sorted)
+        print(f'\tScan mean distance: {self.dist_avg}')  # if self.verbose
 
         
 
     def refine (self, **kwargs):
         """
         Refine rays
-        # TODO: IMPORTANT: ALWAYS KEEP RAYS IN SAME ORDER FOR EACH REFINE (CHILD OF RAY 1 IS NEW_RAY 1 ETC)
-        # => Either number the rays inside the raypack or avoid the angles overlapping
-        # IF NO PROGRESS FOR A SPECIFIC RAY: DO SOMETHING ELSE (check dist_new - dist_prev)
-        # TODO: stop refine if mean distance increases!!! (ponderate with ray energy at target point)
+        # TODO: stop refine if mean distance increases!!! (check dist_new - dist_prev)
         # TODO => ponderate mean distance with ray energy at target point (nb rebounds etc)
 
+        :param kwargs/cone_half_angle:
+        :param kwargs/n_rays:
         :param kwargs/iterations: Number of back-to-back refine iterations
+        :param kwargs/force_refine: Force refine past precision cutoff
+        :param kwargs/verbose: Verbose (default=False)
         :param Ray2D.propagate/kwargs/backprop: Allow backpropagation (default=True)
         :param Ray2D.propagate/kwargs/dx_max:
         :param Ray2D.propagate/kwargs/dz_max:
         :param Ray2D.propagate/kwargs/n_steps_max:
-        :param Ray2D.propagate/kwargs/verbose: Verbose (default=False)
         """
-
+        
+        cone_half_angle = kwargs.get('cone_half_angle', self.__angular_precision)
+        n_rays = kwargs.get('n_rays', 5)
         iterations = kwargs.get('iterations', 1)
+        force_refine = kwargs.get('force_refine', False)
+
         for i in range(iterations):
+
+            # Precision check
+            if self.dist_avg <= self.precision_cutoff and not force_refine:
+                if self.verbose: print('Target precision reached')
+                break
 
             # Load previous raypack
             pack_prev = self.get_last_pack()
             raypack_prev = self.raypacks[pack_prev]
             # Increment refines counter (first refine has id=1)
-            self.n_refines += 1
+            self.n_refines += 1  # TODO: better log of refine steps (incl. parameters and number of cast and selected) for __repr__
             # Generate new raypack
             pack_refine = self.gen_pack_refine(self.n_refines)
             self.raypacks[pack_refine] = RayPack2D()
             raypack_refine = self.raypacks[pack_refine]
 
-
-            # print(f'\n#{self.n_refines}: Refining from "{pack_prev}" to "{pack_refine}"')
             for ray_id, ray in enumerate(raypack_prev.rays):
-                # print(f'\tRay {ray_id+1}/{raypack_prev.n_rays}')
-
                 # Generate temporary refine raypack
                 pack_temp = self.gen_pack_temp_refine(self.n_refines, ray_id)
                 self.raypacks[pack_temp] = RayPack2D()
+                raypack_temp = self.raypacks[pack_temp]
 
                 # Cast rays
-                # cone_angle = self.dz_max * (np.sin(angle) ** 2) / sim_distance  # Angular range around theta which guarantees an arrival vertical displacement lower than self.dz_max
-                cone_angle = 0.01
-                n_rays_refine = 5
-                angles = np.linspace(ray.angle - cone_angle, ray.angle + cone_angle, n_rays_refine)
-                self.cast (self.scan_freq, *angles, pack=pack_temp, target=self.target, **self.init_kwargs)  # TODO: pass kwargs?
+                angle_min = ray.angle - cone_half_angle
+                angle_max = ray.angle + cone_half_angle
+                angles = np.linspace(angle_min, angle_max, n_rays)
+                self.cast (self.scan_freq, *angles, pack=pack_temp, target=self.target, **self.init_kwargs)
+                raypack_temp.add(ray)  # Add initial ray (add after cast so that frequency is already generated)
                 
                 # Select best ray
-                raypack_temp = self.raypacks[pack_temp]
                 dmin = raypack_temp.dist_sorted[0]
                 ray_selected = raypack_temp.dist[dmin][0]  # Select best ray # TODO: only 1? or multiple if same distance?
                 raypack_refine.add(ray_selected)
 
+            # Update angular precision (precision cone half-angle)
+            self.__angular_precision /= n_rays
+            self.dist_avg = np.mean(raypack_refine.dist_sorted)
+
+            print(f'\tRefine #{self.n_refines} mean distance: {self.dist_avg}')  # if self.verbose
+
         
-            print(f'\tRefine #{self.n_refines} mean distance: {np.mean(raypack_refine.dist_sorted)}')
+            
 
 
 
