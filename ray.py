@@ -1,10 +1,11 @@
 # 2D Ray Propagation Model (v3.2)
 # Copyright Anatole Hernot (Mines Paris), 2022. All rights reserved.
 
-# TODO: increase pace when far enough away from borders
-# TODO: add a verbose_indent kwargs field to indent verbose when called from Simulation2D with verbose enabled
-# TODO: add an absorption_max criteria (either in mult or in dB)
-# TODO: decouple ray path and frequency: calc_absorption(*freqs) method
+# TODO: Increase pace when far enough away from borders
+# TODO: Add an absorption_max criteria (either in mult or in dB)?
+# TODO: Decouple ray path and frequency: calc_absorption(*freqs) method
+# TODO: Ray2D.reverse()
+# TODO: RayPack2D.__repr__()
 
 # http://www.sengpielaudio.com/calculator-FactorRatioLevelDecibel.htm
 
@@ -268,8 +269,6 @@ class Ray2D:
 
 
 
-
-# TODO: add __repr__
 
 class RayPack2D:
 

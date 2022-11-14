@@ -1,10 +1,10 @@
 # 2D Ray Simulation (v1.3)
 # Copyright Anatole Hernot (Mines Paris), 2022. All rights reserved.
 
-# TODO: Preset with self.env.range_{min/max} instead of extending for each ray? But range is useful for plotting too… so maybe add plot_range_{min/max}?
 # TODO: Calculate number of ray steps using rough max nb of rebounds to never stop midway
-# TODO: # keep n rays for each nb of rebounds, up to max nb of rebounds? wise? idts
-# TODO: always keep the rays in the same order after each refine: useful?
+# TODO: Keep n rays for each nb of rebounds, up to max nb of rebounds? wise? idts
+# TODO: Always keep the rays in the same order after each refine: useful?
+# TODO: Simulation2D.__repr__()
 
 import numpy as np
 # import matplotlib.pyplot as plt
@@ -56,7 +56,7 @@ class Simulation2D:
         self.range_max = self.env.range_max
         self.size = self.env.size
 
-    def __repr__ (self):  # TODO: to improve later
+    def __repr__ (self):
         stop_reasons_formatted = '\n'.join([f'\t{stop_reason}: {len(self.stop_reasons[stop_reason])}' for stop_reason in self.stop_reasons])
         return f'2D simulation containing {self.n_rays} rays\nStop reasons:\n{stop_reasons_formatted}'
 
