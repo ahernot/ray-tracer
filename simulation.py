@@ -272,6 +272,8 @@ class EigenraySim2D (Simulation2D):
         self.raypacks[self.pack_scan] = RayPack2D()
         raypack_scan = self.raypacks[self.pack_scan]
         raypack_scan.add(*rays)
+        # Update default raypack
+        self.pack_default = self.pack_scan
 
         self.dist_avg = np.mean(raypack_scan.dist_sorted)
         print(f'\tScan mean distance: {self.dist_avg}')  # if self.verbose
@@ -339,18 +341,12 @@ class EigenraySim2D (Simulation2D):
 
             print(f'\tRefine #{self.n_refines} mean distance: {self.dist_avg}')  # if self.verbose
 
+        # Update default raypack
+        self.pack_default = pack_refine
 
-    # Generate filter => requires > 1 refine iteration and will by default choose the final refine raypack
 
+    # TODO: Generate filter => requires > 1 refine iteration and will by default choose the final refine raypack
     # Can downsample
     # def downsample (self):
     # creates new downsampled pack
 
-    def get_last_pack (self):
-        """ Get best (last) raypack """
-        return self.pack_scan if self.n_refines == 0 else self.gen_pack_refine(self.n_refines)
-
-    def get (self):
-        # TODO: rename, etc
-        pack = self.get_last_pack()
-        raypack = self.raypacks[pack]
