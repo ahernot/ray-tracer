@@ -273,7 +273,9 @@ class RayPack2D:
         self.freqs = dict()  # Dictionary of Ray2D objects indexed by frequency
         self.stop_reasons = dict()  # Dictionary of Ray2D objects indexed by stop reason
         self.dist = dict()
+        self.angles_sorted = None
         self.dist_sorted = None
+        self.freqs_sorted = None
 
         self.n_rays = 0
         self.n_angles = 0
@@ -303,12 +305,14 @@ class RayPack2D:
             self.dist[ray.dist_to_target] = self.dist[ray.dist_to_target] + [ray] if ray.dist_to_target in self.dist else [ray]
 
         self.dist_sorted = np.sort(list(self.dist.keys()))
-
+        self.angles_sorted = np.sort(list(self.angles.keys()))
+        self.freqs_sorted = np.sort(list(self.freqs.keys()))
 
     def regen_energy (self):
         # Regenerate normalised ray energy unit
         self.__energy_norm = self.energy_total / np.sum([len(self.freqs[freq]) * self.spectrum_distrib[freq] for freq in self.freqs])
         self.ray_energy = {freq: self.spectrum_distrib[freq] * self.__energy_norm for freq in self.freqs}
+
 
     def __copy__ (self):
         cls = self.__class__
@@ -319,7 +323,9 @@ class RayPack2D:
         result.freqs = self.freqs .copy()
         result.stop_reasons = self.stop_reasons .copy()
         result.dist = self.dist .copy()
+        result.angles_sorted = self.angles_sorted .copy()
         result.dist_sorted = self.dist_sorted .copy()
+        result.freqs_sorted = self.freqs_sorted .copy()
 
         result.n_rays = self.n_rays
         result.n_angles = self.n_angles
@@ -334,7 +340,3 @@ class RayPack2D:
         result.ray_energy = self.ray_energy
 
         return result
-
-
-class EigenRayPack2D (RayPack2D):
-    pass
