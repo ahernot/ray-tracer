@@ -53,6 +53,8 @@ class Environment2D:
         self.__dx_ceil_sampled = np.gradient(self.__ceil_sampled) / self.res_x
         self.dx_floor = interpolate.interp1d(self.penv.x, self.__dx_floor_sampled, kind='quadratic')  # floor is static
         self.dx_ceil = interpolate.interp1d(self.penv.x, self.__dx_ceil_sampled, kind='quadratic')  # ceiling is static
+        self.floor_avg = np.mean(self.__floor_sampled)
+        self.ceil_avg = np.mean(self.__ceil_sampled)
 
 
 
