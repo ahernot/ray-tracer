@@ -29,7 +29,6 @@ class Ray2D:
     def __init__ (self, env: Environment2D, source: np.ndarray, angle, **kwargs):
         """
         Initialise ray
-        
         :param env: Simulation environment
         :param source: Source point
         :param angle: Casting angle (from horizontal), in radians
@@ -65,7 +64,7 @@ class Ray2D:
         ]
         return '\n'.join(repr_list)
 
-    def plot (self, fig, **kwargs):
+    def plot (self, fig, **kwargs):  # TODO: Plot gain: self.L, self.G[freq]
         if self.__is_propagated:
             plt.plot(self.XZ[:,0], self.XZ[:,1], figure=fig, **kwargs)
 
@@ -259,9 +258,9 @@ class Ray2D:
         
         self.__is_propagated = True
     
-    def populate (self, *freq):
+    def populate (self, *freqs):
 
-        for freq in freq:
+        for freq in freqs:
             
             # Check if freq already generated
             if freq in self.freqs: continue
@@ -300,23 +299,20 @@ class Ray2D:
 
 class RayPack2D:
 
-    def __init__ (self):
+    def __init__ (self, **kwargs):
+        """
+        :param kwargs/spectrum: Spectral power distribution"""
         self.rays = list()  # Raw list of rays (stored as references to Ray2D objects)
-        self.angles = dict()  # Dictionary of Ray2D objects indexed by angle
-        self.freqs = dict()  # Dictionary of Ray2D objects indexed by frequency
         self.stop_reasons = dict()  # Dictionary of Ray2D objects indexed by stop reason
-        self.dist = dict()
-        self.angles_sorted = None
-        self.dist_sorted = None
-        self.freqs_sorted = None
+        self.angles = dict()  # Dictionary of Ray2D objects indexed by angle
+        self.dist = dict()  # Dictionary of Ray2D objects indexed by distance to target
+        self.angles_sorted, self.dist_sorted, self.freqs_sorted = None, None, None
+        self.freqs = list()
+        self.n_rays, self.n_angles, self.n_freqs = 0, 0, 0
 
-        self.range_min_plot = np.zeros(2)
-        self.range_max_plot = np.zeros(2)
-        self.size_plot = np.zeros(2)
 
-        self.n_rays = 0
-        self.n_angles = 0
-        self.n_freqs = 0
+        # Get spectral power distribution
+        self.spectrum = kwargs.get('spectrum', lambda x: 1.)
 
         self.spectrum_vals = dict()  # Samples of self.spectrum non-normalised distribution function
         self.spectrum_total = None
@@ -325,6 +321,11 @@ class RayPack2D:
         self.energy_total = 1.
         self.__energy_norm = None
         self.ray_energy = None  # Dict of ray normalised energy unit per frequency
+
+
+        self.range_min_plot = np.zeros(2)
+        self.range_max_plot = np.zeros(2)
+        self.size_plot = np.zeros(2)
 
     def __repr__ (self):
         repr_list = [
@@ -338,13 +339,11 @@ class RayPack2D:
             # Update counters
             self.n_rays += 1
             self.n_angles += 0 if ray.angle in self.angles else 1
-            self.n_freqs += 0 if ray.freq in self.freqs else 1
 
             # Add ray to database
             self.rays .append(ray)
-            self.angles[ray.angle] = self.angles[ray.angle] + [ray] if ray.angle in self.angles else [ray]
-            self.freqs[ray.freq] = self.freqs[ray.freq] + [ray] if ray.freq in self.freqs else [ray]
             self.stop_reasons[ray.stop_reason] = self.stop_reasons[ray.stop_reason] + [ray] if ray.stop_reason in self.stop_reasons else [ray]
+            self.angles[ray.angle] = self.angles[ray.angle] + [ray] if ray.angle in self.angles else [ray]
             self.dist[ray.dist_to_target] = self.dist[ray.dist_to_target] + [ray] if ray.dist_to_target in self.dist else [ray]
 
             # Update plot range
@@ -359,7 +358,28 @@ class RayPack2D:
         # Update sorted arrays
         self.dist_sorted = np.sort(list(self.dist.keys()))
         self.angles_sorted = np.sort(list(self.angles.keys()))
-        self.freqs_sorted = np.sort(list(self.freqs.keys()))
+        
+
+    def populate (self, *freqs):
+        
+        for freq in freqs:
+
+            # Check if freq already generated
+            if freq in self.freqs: continue
+
+            # Populate rays
+            for ray in self.rays:
+                ray.populate(*freqs)
+
+            self.freqs .append(freq)
+
+        self.n_freqs = len(self.freqs)
+        self.freqs_sorted = np.sort(self.freqs)  # TODO: useful?
+
+        # Distribute spectral power
+        self.spectrum_total = np.sum(list(self.spectrum_vals.values()))  # Regenerate total of raw spectral values
+        self.spectrum_distrib = {freq: self.spectrum(freq) / self.spectrum_total for freq in self.freqs}  # Regenerate dictionary of spectral energy distribution per frequency (xf)
+
 
     def regen_energy (self):
         # Regenerate normalised ray energy unit
