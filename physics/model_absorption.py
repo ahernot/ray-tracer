@@ -5,7 +5,7 @@ import numpy as np
 
 
 
-def calc_dz_dG_coefs (z, T, S, pH):
+def calc_dl_dG_coefs (z, T, S, pH):
         f1 = 0.78 * np.sqrt(S / 35) * np.exp(T / 26)  # Boric acid relaxation frequency (kHz)
         f2 = 42 * np.exp(T / 17)  # Magnesium sulfate relaxation frequency (kHz)
         A2 = 0.52 * (1 + T / 43) * (S / 35)
@@ -16,7 +16,7 @@ def calc_dz_dG_coefs (z, T, S, pH):
         return params
 
 
-def calc_dz_dG (f: float, z: float, calc_dz_dG_coefs_interp):
+def calc_dl_dG (f: float, z: float, calc_dz_dG_coefs_interp):
     f1, f2, A2, E1, E2, E3 = calc_dz_dG_coefs_interp(z)
     f /= 1000   # to get f in kHz for the formula
 
@@ -37,7 +37,7 @@ def calc_dz_dG (f: float, z: float, calc_dz_dG_coefs_interp):
 
 
 
-# Sound absorption in seawater
+# Sound absorption in seawater (deprecated)
 def calc_absorption_dB (f: float, z: float, T: float, S: float, pH: float):
     """
     Ainslie and McColm 1998

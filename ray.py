@@ -2,8 +2,6 @@
 # Copyright Anatole Hernot (Mines Paris), 2022. All rights reserved.
 
 # TODO: Increase pace when far enough away from borders
-# TODO: Add an absorption_max criteria (either in mult or in dB)?
-# TODO: Decouple ray path and frequency: calc_absorption(*freqs) method
 # TODO: Ray2D.reverse()
 # TODO: RayPack2D.__repr__()
 
@@ -299,29 +297,14 @@ class Ray2D:
 
 class RayPack2D:
 
-    def __init__ (self, **kwargs):
-        """
-        :param kwargs/spectrum: Spectral power distribution"""
+    def __init__ (self):
         self.rays = list()  # Raw list of rays (stored as references to Ray2D objects)
         self.stop_reasons = dict()  # Dictionary of Ray2D objects indexed by stop reason
         self.angles = dict()  # Dictionary of Ray2D objects indexed by angle
         self.dist = dict()  # Dictionary of Ray2D objects indexed by distance to target
-        self.angles_sorted, self.dist_sorted, self.freqs_sorted = None, None, None
+        self.dist_sorted = None
         self.freqs = list()
         self.n_rays, self.n_angles, self.n_freqs = 0, 0, 0
-
-
-        # Get spectral power distribution
-        self.spectrum = kwargs.get('spectrum', lambda x: 1.)
-
-        self.spectrum_vals = dict()  # Samples of self.spectrum non-normalised distribution function
-        self.spectrum_total = None
-        self.spectrum_distrib = dict()  # xf
-
-        self.energy_total = 1.
-        self.__energy_norm = None
-        self.ray_energy = None  # Dict of ray normalised energy unit per frequency
-
 
         self.range_min_plot = np.zeros(2)
         self.range_max_plot = np.zeros(2)
@@ -356,9 +339,7 @@ class RayPack2D:
         self.size_plot = self.range_max_plot - self.range_min_plot
 
         # Update sorted arrays
-        self.dist_sorted = np.sort(list(self.dist.keys()))
-        self.angles_sorted = np.sort(list(self.angles.keys()))
-        
+        self.dist_sorted = np.sort(list(self.dist.keys())) 
 
     def populate (self, *freqs):
         
@@ -372,16 +353,4 @@ class RayPack2D:
                 ray.populate(*freqs)
 
             self.freqs .append(freq)
-
         self.n_freqs = len(self.freqs)
-        self.freqs_sorted = np.sort(self.freqs)  # TODO: useful?
-
-        # Distribute spectral power
-        self.spectrum_total = np.sum(list(self.spectrum_vals.values()))  # Regenerate total of raw spectral values
-        self.spectrum_distrib = {freq: self.spectrum(freq) / self.spectrum_total for freq in self.freqs}  # Regenerate dictionary of spectral energy distribution per frequency (xf)
-
-
-    def regen_energy (self):
-        # Regenerate normalised ray energy unit
-        self.__energy_norm = self.energy_total / np.sum([len(self.freqs[freq]) * self.spectrum_distrib[freq] for freq in self.freqs])
-        self.ray_energy = {freq: self.spectrum_distrib[freq] * self.__energy_norm for freq in self.freqs}

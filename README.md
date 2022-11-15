@@ -5,7 +5,6 @@ Physics simulation ray-tracing algorithm
 
 
 ## To-do list
-- Initialise `Ray2D` WITHOUT freq and then `propagate()` and `populate(frequency_array)`  => NO MORE RAYPACK GROUPING BY FREQ!!!!
 - Clean up physics/
 - Use `Ray2D.calc_z` to generate heatmap (avoids same-ray energy overlap and energy cell overcrowding)
 - ? Update `Ray2D` to v3.3 with support for an array of frequencies

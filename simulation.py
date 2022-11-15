@@ -6,6 +6,7 @@
 # TODO: Always keep the rays in the same order after each refine: useful?
 # TODO: Simulation2D.__repr__()
 # TODO: Make RayPack2D.add() work when adding a new ray without generating it using Simulation2D: all the power recalculations must be done from within the raypack
+# TODO: add scanning and refining timers
 
 
 import numpy as np
@@ -48,11 +49,8 @@ class Simulation2D:
 
         # Generate default pack
         self.pack_default = kwargs.get('pack_default', 'main') 
-        if self.pack_default: self.raypacks[self.pack_default] = RayPack2D(spectrum=self.spectrum)
+        if self.pack_default: self.raypacks[self.pack_default] = RayPack2D()
         
-        # Get spectral power distribution
-        self.spectrum = kwargs.get('spectrum', lambda x: 1.)  # spectral power distribution (only the frequencies generated make up the ray power)
-
         # Initialise ranges
         self.range_min = self.env.range_min
         self.range_max = self.env.range_max
@@ -62,22 +60,6 @@ class Simulation2D:
         # stop_reasons_formatted = '\n'.join([f'\t{stop_reason}: {len(self.stop_reasons[stop_reason])}' for stop_reason in self.stop_reasons])
         # return f'2D simulation containing {self.n_rays} rays\nStop reasons:\n{stop_reasons_formatted}'
         return self.__class__.__name__ + ' object'
-
-    # def __distribute_spectral_power (self, pack):
-
-    #     # Get target raypack
-    #     raypack = self.raypacks[pack]
-
-    #     # Add samples of self.spectrum non-normalised distribution function
-    #     for freq in raypack.freqs:
-    #         if freq not in raypack.spectrum_vals:
-    #             raypack.spectrum_vals [freq] = self.spectrum(freq)
-
-    #     # Regenerate total of raw spectral values
-    #     raypack.spectrum_total = np.sum(list(raypack.spectrum_vals.values()))
-
-    #     # Regenerate dictionary of spectral energy distribution per frequency (xf)
-    #     raypack.spectrum_distrib = {freq: self.spectrum(freq) / raypack.spectrum_total for freq in raypack.freqs}
 
     def cast (self, *angles, **kwargs):
         """
@@ -96,7 +78,7 @@ class Simulation2D:
 
         # Get target raypack
         pack = kwargs.get('pack', self.pack_default)
-        if pack not in self.raypacks: self.raypacks[pack] = RayPack2D(spectrum=self.spectrum)
+        if pack not in self.raypacks: self.raypacks[pack] = RayPack2D()
         raypack = self.raypacks[pack]
 
         for angle in angles:
@@ -105,9 +87,6 @@ class Simulation2D:
             ray = Ray2D (self.env, self.source, angle, **kwargs)
             ray.propagate(**kwargs)
             raypack.add(ray)
-
-        # Regenerate ray energy (TODO: remove from here)
-        raypack.regen_energy()
 
     def heatmap (self, **kwargs):
         """
@@ -141,7 +120,7 @@ class Simulation2D:
 
             # Plot ray heatmap according to ray energy
             vals = np.power(ray.Tmult, -0.1)
-            heatmap_ray = coords_to_mask_2d(heatmap_shape, rx, vals) * raypack.ray_energy[ray.freq]
+            heatmap_ray = coords_to_mask_2d(heatmap_shape, rx, vals)
             heatmap_full += heatmap_ray
 
         # Normalise heatmap
@@ -181,7 +160,6 @@ class EigenraySim2D (Simulation2D):
         :param n_rebounds_max: Maximum number of rebounds
 
         :param kwargs/spectrum: Power spectrum
-        :param kwargs/scan_freq: Scanning frequency (doesn't affect ray path)
         :param kwargs/n_rays: Number of rays (can be exceeded if rays have the same distance)
         :param n_rays_scan: Number of scanning rays (higher is better)
         :param kwargs/scan_angle_min: Override automatic min scan angle
@@ -207,7 +185,6 @@ class EigenraySim2D (Simulation2D):
         self.target = target
         self.n_rebounds_max = n_rebounds_max
         self.n_rays = n_rays
-        self.scan_freq = kwargs.get('scan_freq', 1)
         self.precision_cutoff = kwargs.get('precision_cutoff', 0.1)  # in meters
         # Variables updated along the way
         self.dist = dict()
@@ -243,14 +220,15 @@ class EigenraySim2D (Simulation2D):
             angle_min = angle_min if angle_min else -1 * np.arcsin( Dx / ((N+1) * Dz - Dz_sc - Dz_tc) )
             angle_max = angle_max if angle_max else np.arcsin( Dx / ((N-1) * Dz + Dz_sc + Dz_tc) )
 
+
         # Calculate angular precision
         if self.verbose: print(f'{self._Simulation2D__vi}Scanning using {self.n_rays_scan} rays between angles {angle_min} and {angle_max}')
-        self.__angular_precision = (angle_max - angle_min) / self.n_rays_scan# / 2  # Cone half-angle
+        self.__angular_precision = (angle_max - angle_min) / self.n_rays_scan# / 2  # Cone half-angle  # TODO: ???
 
         # Cast scanning rays
-        self.raypacks[self.pack_temp_scan] = RayPack2D(spectrum=self.spectrum)
+        self.raypacks[self.pack_temp_scan] = RayPack2D()
         angles = np.linspace(angle_min, angle_max, self.n_rays_scan)
-        self.cast (self.scan_freq, *angles, pack=self.pack_temp_scan, target=self.target, n_rebounds_max=self.n_rebounds_max, **self.init_kwargs)
+        self.cast (*angles, pack=self.pack_temp_scan, target=self.target, n_rebounds_max=self.n_rebounds_max, **self.init_kwargs)
         
         # Sort and select rays
         raypack_temp_scan = self.raypacks[self.pack_temp_scan]
@@ -259,14 +237,10 @@ class EigenraySim2D (Simulation2D):
         rays = list(itertools.chain.from_iterable( itemgetter(*dist_sorted[:self.n_rays])(raypack_temp_scan.dist) ))
 
         # Generate scan output raypack
-        self.raypacks[self.pack_scan] = RayPack2D(spectrum=self.spectrum)
+        self.raypacks[self.pack_scan] = RayPack2D()
         raypack_scan = self.raypacks[self.pack_scan]
         raypack_scan.add(*rays)
-        # Update scan raypack
-        # self._Simulation2D__distribute_spectral_power(self.pack_scan)
-        raypack_scan.regen_energy() #TODO:remove
-        # Set default raypack
-        self.pack_default = self.pack_scan
+        self.pack_default = self.pack_scan  # Set default raypack
 
         self.dist_avg = np.mean(raypack_scan.dist_sorted)
         if self.verbose: print(f'{self._Simulation2D__vi}Scan mean distance: {self.dist_avg}')
@@ -304,42 +278,33 @@ class EigenraySim2D (Simulation2D):
             self.n_refines += 1  # TODO: better log of refine steps (incl. parameters and number of cast and selected) for __repr__
             # Generate new raypack
             pack_refine = self.gen_pack_refine(self.n_refines)
-            self.raypacks[pack_refine] = RayPack2D(spectrum=self.spectrum)
+            self.raypacks[pack_refine] = RayPack2D()
             raypack_refine = self.raypacks[pack_refine]
 
             for ray_id, ray in enumerate(raypack_prev.rays):
                 # Generate temporary refine raypack
                 pack_temp = self.gen_pack_temp_refine(self.n_refines, ray_id)
-                self.raypacks[pack_temp] = RayPack2D(spectrum=self.spectrum)
-                raypack_temp = self.raypacks[pack_temp]
+                self.raypacks[pack_temp] = RayPack2D()
 
                 # Cast rays
-                angle_min = ray.angle - cone_half_angle
-                angle_max = ray.angle + cone_half_angle
-                angles = np.linspace(angle_min, angle_max, n_rays)
-                self.cast (self.scan_freq, *angles, pack=pack_temp, target=self.target, **self.init_kwargs)
+                angles = np.linspace(ray.angle - cone_half_angle, ray.angle + cone_half_angle, n_rays)
+                self.cast (*angles, pack=pack_temp, target=self.target, **self.init_kwargs)
 
                 # Add initial ray (add after cast so that frequency is already generated)
+                raypack_temp = self.raypacks[pack_temp]
                 raypack_temp.add(ray)
-                raypack_temp.regen_energy()  #TODO:remove
                 
-                # Select best ray
+                # Select best ray and add to output raypack
                 dmin = raypack_temp.dist_sorted[0]
                 ray_selected = raypack_temp.dist[dmin][0]  # Select best ray # TODO: only 1? or multiple if same distance?
                 raypack_refine.add(ray_selected)
-
-            # Update refine raypack
-            # self._Simulation2D__distribute_spectral_power(pack_refine)
-            raypack_refine.regen_energy()  #TODO:remove
 
             # Update angular precision (precision cone half-angle)
             self.__angular_precision /= n_rays
             self.dist_avg = np.mean(raypack_refine.dist_sorted)
 
             if self.verbose: print(f'{self._Simulation2D__vi}Refine #{self.n_refines} mean distance: {self.dist_avg}')  # if self.verbose
-
-            # Set default raypack
-            self.pack_default = pack_refine
+            self.pack_default = pack_refine  # Set default raypack
 
     def get_filter (self, *freqs, **kwargs) -> np.ndarray:
         """
@@ -349,8 +314,8 @@ class EigenraySim2D (Simulation2D):
         pack = kwargs.get('pack', self.pack_default)
         raypack = self.raypacks [pack]
 
-        for ray in raypack:
-            # ray.populate(*freq)  # => generates absorption values in a dict
+        for ray in raypack.rays:
+            ray.populate(*freqs)
             # this generates an absorption dictionary but also the ray knows what its target is so why not generate an absorption value per frequency and just return these in a list
             #   like: return [self.G_target[freq] for freq in freq_gen]
             pass
