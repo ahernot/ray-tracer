@@ -56,7 +56,8 @@ class Environment2D:
         self.floor_avg = np.mean(self.__floor_sampled)
         self.ceil_avg = np.mean(self.__ceil_sampled)
 
-
+    def __repr__ (self):
+        return self.__class__.__name__ + ' object'
 
     def plot (self, fig, **kwargs):
         plt.plot(self.penv.x, self.__ceil_sampled, figure=fig, **kwargs)

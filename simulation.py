@@ -5,6 +5,8 @@
 # TODO: Keep n rays for each nb of rebounds, up to max nb of rebounds? wise? idts
 # TODO: Always keep the rays in the same order after each refine: useful?
 # TODO: Simulation2D.__repr__()
+# TODO: Make RayPack2D.add() work when adding a new ray without generating it using Simulation2D: all the power recalculations must be done from within the raypack
+
 
 import numpy as np
 # import matplotlib.pyplot as plt
@@ -56,9 +58,10 @@ class Simulation2D:
         self.range_max = self.env.range_max
         self.size = self.env.size
 
-    def __repr__ (self):
-        stop_reasons_formatted = '\n'.join([f'\t{stop_reason}: {len(self.stop_reasons[stop_reason])}' for stop_reason in self.stop_reasons])
-        return f'2D simulation containing {self.n_rays} rays\nStop reasons:\n{stop_reasons_formatted}'
+    def __repr__ (self):  # TODO: __repr__
+        # stop_reasons_formatted = '\n'.join([f'\t{stop_reason}: {len(self.stop_reasons[stop_reason])}' for stop_reason in self.stop_reasons])
+        # return f'2D simulation containing {self.n_rays} rays\nStop reasons:\n{stop_reasons_formatted}'
+        return self.__class__.__name__ + ' object'
 
     def __distribute_spectral_power (self, pack):
 
@@ -170,24 +173,18 @@ class Simulation2D:
             ray.plot(fig, **kwargs)
         self.env.plot(fig, c='red')
 
-    def save (self):
-        # save as a file
-        pass
-
-    def extract (self):
-        # Return new Simulation with only the selected rays
-        pass
 
 
 
 class EigenraySim2D (Simulation2D):
 
-    def __init__ (self, env: Environment2D, source: np.ndarray, target: np.ndarray, n_rebounds_max: int, **kwargs):
+    def __init__ (self, env: Environment2D, source: np.ndarray, target: np.ndarray, n_rays: int, n_rebounds_max: int, **kwargs):
         """
         Eigenray simulation
         :param env: Simulation environment
         :param source: Source point
         :param target: Target point
+        :param n_rays: Number of rays (can be exceeded if multiple rays have the same distance)
         :param n_rebounds_max: Maximum number of rebounds
 
         :param kwargs/spectrum: Power spectrum
@@ -212,20 +209,19 @@ class EigenraySim2D (Simulation2D):
         self.gen_pack_temp_refine = lambda n_refines, ray_id: f'__iter{n_refines}-refine-ray{ray_id}'  # iter3-refine-ray7
         self.gen_pack_refine = lambda n_refines: f'refine-{n_refines}'
 
-        # Initialise Simulation2D
+        # Initialise Simulation2D & EigenraySim2D
         super(EigenraySim2D, self).__init__(env, source, pack_default=None, **kwargs)
-
-        # Initialise EigenraySim2D
-        self.target: np.ndarray = target
+        self.target = target
         self.n_rebounds_max = n_rebounds_max
+        self.n_rays = n_rays
         self.scan_freq = kwargs.get('scan_freq', 1)
-        self.n_rays: int = kwargs.get('n_rays', 25)
+        self.precision_cutoff = kwargs.get('precision_cutoff', 0.1)  # in meters
+        # Variables updated along the way
         self.dist = dict()
         self.dist_avg = None
         self.n_refines = 0
         self.__angular_precision = None
-        self.precision_cutoff = kwargs.get('precision_cutoff', 0.1)  # in meters
-
+        
         # Initial scan        
         self.n_rays_scan = kwargs.get('n_rays_scan', self.n_rays * 10)  # TODO: default multiplier
         self.__scan(kwargs.get('scan_angle_min', None), kwargs.get('scan_angle_max', None))
@@ -309,7 +305,7 @@ class EigenraySim2D (Simulation2D):
                 break
 
             # Load previous raypack
-            pack_prev = self.__get_last_pack()
+            pack_prev = self.pack_default
             raypack_prev = self.raypacks[pack_prev]
             # Increment refines counter (first refine has id=1)
             self.n_refines += 1  # TODO: better log of refine steps (incl. parameters and number of cast and selected) for __repr__
@@ -349,15 +345,22 @@ class EigenraySim2D (Simulation2D):
 
             if self.verbose: print(f'{self._Simulation2D__vi}Refine #{self.n_refines} mean distance: {self.dist_avg}')  # if self.verbose
 
-        # Set default raypack
-        self.pack_default = pack_refine
+            # Set default raypack
+            self.pack_default = pack_refine
 
-    def __get_last_pack (self):
-        return self.pack_scan if self.n_refines == 0 else self.gen_pack_refine(self.n_refines)
+    def get_filter (self, *freq, **kwargs) -> np.ndarray:
+        """
+        :param kwargs/pack: Pack to generate the filter for
+        """
 
+        pack = kwargs.get('pack', self.pack_default)
+        raypack = self.raypacks [pack]
 
-    # TODO: Generate filter => requires > 1 refine iteration and will by default choose the final refine raypack
-    # Can downsample
-    # def downsample (self):
-    # creates new downsampled pack
+        for ray in raypack:
+            # ray.populate(*freq)  # => generates absorption values in a dict
+            # this generates an absorption dictionary but also the ray knows what its target is so why not generate an absorption value per frequency and just return these in a list
+            #   like: return [self.G_target[freq] for freq in freq_gen]
+            pass
 
+        # Then add the gains together (with delays/offsets) and interpolate: get one gain and one phase value per frequency
+        # Return as a complex numpy array

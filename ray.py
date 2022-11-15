@@ -55,7 +55,12 @@ class Ray2D:
         self.range_max = np.zeros(2)
 
     def __repr__ (self):
-        return f'Ray of frequency {self.freq}'  # TODO: improve repr
+        repr_list = [
+            f'{"Propagated " if self.__is_propagated else ""}{self.__class__.__name__} object cast from {self.source} {f"to target {self.target} " if self.target is not None else ""}at angle {self.angle} rad',
+            f'\tStop reason: {self.stop_reason}' if self.stop_reason else '',
+            f'\tDistance to target: {self.dist_to_target} m' if self.dist_to_target else ''
+        ]
+        return '\n'.join(repr_list)
 
     def plot (self, fig, **kwargs):
         if self.__is_propagated:
@@ -267,6 +272,8 @@ class Ray2D:
     def reverse (self):
         pass  # TODO: Ray2D.reverse
 
+# def populate (freqs)
+# IF TARGET: FIND THE STEP ID CLOSEST TO THE TARGET AND USE THIS (or interpolate between this and this+1?) 
 
 
 
@@ -297,6 +304,12 @@ class RayPack2D:
         self.energy_total = 1.
         self.__energy_norm = None
         self.ray_energy = None  # Dict of ray normalised energy unit per frequency
+
+    def __repr__ (self):
+        repr_list = [
+            f'Raypack containing {self.n_rays} rays cast with {self.n_angles} angles'
+        ]
+        return '\n'.join(repr_list)
 
     def add (self, *rays: Ray2D):
 
