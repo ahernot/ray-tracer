@@ -266,7 +266,7 @@ class Ray2D:
             if freq in self.freqs: continue
             
             # Calculate base gain
-            dG = -1 * self.env.penv.calc_dz_dG(freq, self.XZ[:-1, 1]) / 1000 * self.dL  # dG for each dL (decibels)
+            dG = -1 * self.env.penv.calc_dl_dG(freq, self.XZ[:-1, 1]) / 1000 * self.dL  # dG for each dL (decibels)
             G = np.cumsum(np.insert(dG, 0, 0.))  # Cumulative gain for each point (decibels)
 
             # Process rebounds

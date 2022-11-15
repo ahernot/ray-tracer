@@ -19,7 +19,7 @@ from physics.profile_ph import calc_pH
 
 from physics.model_velocity import sound_velocity_medwin
 from physics.model_rho import calc_rho
-from physics.model_absorption import calc_dz_dG_coefs
+from physics.model_absorption import calc_dl_dG_coefs
 from physics.model_impedance import calc_Z
 
 
@@ -71,9 +71,9 @@ class PhysicsEnvironment2D:
         self.calc_rho = interpolate.interp1d (self.z, self.rho, kind='quadratic')
 
         # Absorption (keep full frequency resolution, interpolate spatially)
-        self.__dz_dG_coefs = physics.model_absorption.calc_dz_dG_coefs (self.z, self.T, self.S, self.pH)
-        self.__calc_dz_dG_coefs_interp = interpolate.interp1d (self.z, self.__dz_dG_coefs, axis=1, kind='quadratic')
-        self.calc_dz_dG = lambda f, z: physics.model_absorption.calc_dz_dG (f, z, self.__calc_dz_dG_coefs_interp)
+        self.__dz_dG_coefs = physics.model_absorption.calc_dl_dG_coefs (self.z, self.T, self.S, self.pH)
+        self.__calc_dl_dG_coefs_interp = interpolate.interp1d (self.z, self.__dz_dG_coefs, axis=1, kind='quadratic')
+        self.calc_dl_dG = lambda f, z: physics.model_absorption.calc_dl_dG (f, z, self.__calc_dl_dG_coefs_interp)
 
         # Impedance
         self.Z = physics.model_impedance.calc_Z(self.rho, self.c)
