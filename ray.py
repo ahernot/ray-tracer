@@ -1,4 +1,4 @@
-# 2D Ray Propagation Model (v3.2)
+# 2D Ray Propagation Model (v3.3)
 # Copyright Anatole Hernot (Mines Paris), 2022. All rights reserved.
 
 # TODO: Increase pace when far enough away from borders
@@ -26,7 +26,7 @@ from environment import Environment2D
 
 class Ray2D:
 
-    def __init__ (self, env: Environment2D, source: np.ndarray, freq, angle, **kwargs):
+    def __init__ (self, env: Environment2D, source: np.ndarray, angle, **kwargs):
         """
         Initialise ray
         
@@ -43,13 +43,16 @@ class Ray2D:
         self.env: Environment2D = env
         self.source: np.ndarray = source
         self.target: np.ndarray = kwargs.get('target', None)
-        self.freq = freq
         self.angle = angle
 
         # Initialise
         self.XZ = np.expand_dims(self.source.copy(), axis=0)
         self.T = np.array([0.,])
         self.steps = 1
+
+        self.freqs = list()
+        self.G = dict()
+        self.Tmult = dict()
 
         self.range_min = np.zeros(2)
         self.range_max = np.zeros(2)
@@ -151,11 +154,9 @@ class Ray2D:
                 n = np.array([-1*u[1], u[0]])  # Normal of floor, going up
                 k = np.dot(k, u)*u - np.dot(k, n)*n  # Direction of reflected ray
 
-                # Calculate reflection coefficient
-                wavelength = c / self.freq
+                # Log rebound
                 angle = 1 / ((1 + (k[1]/k[0]) ** 2) ** 0.5)
-                refcoef = calc_refcoef_sediment(wavelength=wavelength, Zp0=self.env.penv.calc_Z(z))
-                self.__rebounds.append({'step': i+1, 'gain_dB': 10 * np.log10(refcoef), 'surface': 'sediment'})
+                self.__rebounds.append({'step': i+1, 'surface': 'sediment', 'velocity': c, 'angle': angle, 'position': P})
                 self.n_rebounds += 1
                 
                 if self.n_rebounds_max > -1 and self.n_rebounds > self.n_rebounds_max:
@@ -174,11 +175,9 @@ class Ray2D:
                 n = np.array([u[1], -1*u[0]])  # Normal of ceiling, going down
                 k = np.dot(k, u)*u - np.dot(k, n)*n  # Direction of reflected ray
 
-                # Calculate reflection coefficient
-                wavelength = c / self.freq
-                angle = 1 / ((1 + (k[1]/k[0]) ** 2) ** 0.5)
-                refcoef = calc_refcoef_surface(wavelength=wavelength, angle=angle)
-                self.__rebounds.append({'step': i+1, 'gain_dB': 10 * np.log10(refcoef), 'surface': 'water-surface'})
+                # Log rebound
+                angle = 1 / ((1 + (k[1]/k[0]) ** 2) ** 0.5)  # TODO: is this the right angle?
+                self.__rebounds.append({'step': i+1, 'surface': 'water-surface', 'velocity': c, 'angle': angle, 'position': P})
                 self.n_rebounds += 1
 
                 if self.n_rebounds_max > -1 and self.n_rebounds > self.n_rebounds_max:
@@ -250,29 +249,51 @@ class Ray2D:
         self.dT = self.dL / self.C[:-1]  # dT at each arrival point (excluding initial point)
         self.T = np.cumsum(np.insert(self.dT, 0, 0.))
 
-        # Calculate gain
-        dG = -1 * self.env.penv.calc_dz_dG(self.freq, self.XZ[:-1, 1]) / 1000 * self.dL  # dG_dB for each dL (decibels)
-        self.G = np.cumsum(np.insert(dG, 0, 0.))  # Cumulative gain for each point (decibels)
-        for rebound in self.__rebounds:
-            G_add = np.zeros(self.steps, dtype=float)
-            G_add[rebound['step']+1:] = rebound['gain_dB']
-            self.G += G_add
-        self.Tmult = np.power(10, self.G / 10)  # Cumulative transmittance multiplier for each point
-
         # Generate interpolated path function
         self.calc_z = interpolate.interp1d(self.XZ[:, 0], self.XZ[:, 1], kind='linear')
 
-        # Calculate distance to target
+        # Calculate distance to target  # TODO: better check interpolation range (if range_x < target.x) and find target step
         if self.target is not None:
             try: self.dist_to_target = abs(self.target[1] - self.calc_z(self.target[0]))
             except: self.dist_to_target = np.nan
         
         self.__is_propagated = True
     
-    def reverse (self):
-        pass  # TODO: Ray2D.reverse
+    def populate (self, *freq):
 
-# def populate (freqs)
+        for freq in freq:
+            
+            # Check if freq already generated
+            if freq in self.freqs: continue
+            
+            # Calculate base gain
+            dG = -1 * self.env.penv.calc_dz_dG(freq, self.XZ[:-1, 1]) / 1000 * self.dL  # dG for each dL (decibels)
+            G = np.cumsum(np.insert(dG, 0, 0.))  # Cumulative gain for each point (decibels)
+
+            # Process rebounds
+            for rebound in self.__rebounds:
+
+                wavelength = rebound['velocity'] / freq
+                if rebound['surface'] == 'sediment':
+                    z = rebound['position'][1]
+                    refcoef = calc_refcoef_sediment(wavelength=wavelength, Zp0=self.env.penv.calc_Z(z))
+                elif rebound['surface'] == 'water-surface':
+                    angle = rebound['angle']
+                    refcoef = calc_refcoef_surface(wavelength=wavelength, angle=angle)
+
+                G_add = np.zeros(self.steps, dtype=float)
+                G_add[rebound['step']+1:] = 10 * np.log10(refcoef)
+                G += G_add
+            
+            # Cumulative transmittance multiplier for each point
+            Tmult = np.power(10, G / 10)
+
+            # Save values
+            self.G[freq] = G
+            self.Tmult[freq] = Tmult
+            self.freqs.append(freq)
+
+
 # IF TARGET: FIND THE STEP ID CLOSEST TO THE TARGET AND USE THIS (or interpolate between this and this+1?) 
 
 
