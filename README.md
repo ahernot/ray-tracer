@@ -12,6 +12,11 @@ Physics simulation ray-tracing algorithm
 - Actually a Raypack is a source
 
 ## Method
+
+### Sound theory
+http://www.sengpielaudio.com/calculator-FactorRatioLevelDecibel.htm
+Sound rays…
+
 ### Base assumptions
 * Ray path is frequency-independent (but rebounds aren't)
 

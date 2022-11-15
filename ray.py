@@ -4,8 +4,7 @@
 # TODO: Increase pace when far enough away from borders
 # TODO: Ray2D.reverse()
 # TODO: RayPack2D.__repr__()
-
-# http://www.sengpielaudio.com/calculator-FactorRatioLevelDecibel.htm
+# TODO: IF TARGET: FIND THE STEP ID CLOSEST TO THE TARGET AND USE THIS (or interpolate between this and this+1?) 
 
 
 
@@ -18,7 +17,6 @@ from scipy.optimize import fsolve
 from preferences import *
 from physics.model_reflection import calc_refcoef_surface, calc_refcoef_sediment
 from environment import Environment2D
-
 
 
 
@@ -289,9 +287,6 @@ class Ray2D:
             self.G[freq] = G
             self.Tmult[freq] = Tmult
             self.freqs.append(freq)
-
-
-# IF TARGET: FIND THE STEP ID CLOSEST TO THE TARGET AND USE THIS (or interpolate between this and this+1?) 
 
 
 
