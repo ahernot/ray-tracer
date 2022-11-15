@@ -130,14 +130,14 @@ class Ray2D:
                 x_new = self.env.range_min[0]
                 z_new = -1 * dx_z * (x_new - x) + z  # Only hit when going left (x_dir = -1)
                 self.XZ = np.insert(self.XZ, i+1, np.array([x_new, z_new]), axis=0)  # Add final point
-                if self.verbose: print(f'{self.__vi}DEBUG: Out of bounds (x-axis min)')
+                if self.verbose: print(f'{self.__vi}Stopping: Out of bounds (x-axis min)')
                 self.stop_reason = 'exit-xmin'
                 break 
             elif x_new > self.env.range_max[0]:
                 x_new = self.env.range_max[0]
                 z_new = dx_z * (x_new - x) + z  # Only hit when going right (x_dir = 1)
                 self.XZ = np.insert(self.XZ, i+1, np.array([x_new, z_new]), axis=0)  # Add final point
-                if self.verbose: print(f'{self.__vi}DEBUG: Out of bounds (x-axis max)')
+                if self.verbose: print(f'{self.__vi}Stopping: Out of bounds (x-axis max)')
                 self.stop_reason = 'exit-xmax'
                 break
 
@@ -154,16 +154,16 @@ class Ray2D:
                 # Calculate reflection coefficient
                 wavelength = c / self.freq
                 angle = 1 / ((1 + (k[1]/k[0]) ** 2) ** 0.5)
-                refcoef = calc_refcoef_surface(wavelength=wavelength, angle=angle)
-                self.__rebounds.append({'step': i+1, 'gain_dB': 10 * np.log10(refcoef), 'surface': 'ground'})
+                refcoef = calc_refcoef_sediment(wavelength=wavelength, Zp0=self.env.penv.calc_Z(z))
+                self.__rebounds.append({'step': i+1, 'gain_dB': 10 * np.log10(refcoef), 'surface': 'sediment'})
                 self.n_rebounds += 1
                 
                 if self.n_rebounds_max > -1 and self.n_rebounds > self.n_rebounds_max:
                     self.XZ = np.insert(self.XZ, i+1, P_new, axis=0)  # Add final point
-                    if self.verbose: print(f'{self.__vi}DEBUG: Max number of rebounds reached ({self.n_rebounds_max})')
+                    if self.verbose: print(f'{self.__vi}Stopping: Max number of rebounds reached ({self.n_rebounds_max})')
                     self.stop_reason = 'max-rebounds'
                     break
-                if self.verbose: print(f'{self.__vi}DEBUG: #{self.n_rebounds} - Floor rebound. New dir: {k}')
+                if self.verbose: print(f'{self.__vi}Rebound #{self.n_rebounds} - floor. New dir: {k}')
 
             # Check ceiling rebounds
             elif self.env.ceil and z_new > self.env.ceil(x_new):
@@ -177,16 +177,16 @@ class Ray2D:
                 # Calculate reflection coefficient
                 wavelength = c / self.freq
                 angle = 1 / ((1 + (k[1]/k[0]) ** 2) ** 0.5)
-                refcoef = calc_refcoef_sediment(wavelength=wavelength, Zp0=self.env.penv.calc_Z(z))  # Uses c from previous iteration
+                refcoef = calc_refcoef_surface(wavelength=wavelength, angle=angle)
                 self.__rebounds.append({'step': i+1, 'gain_dB': 10 * np.log10(refcoef), 'surface': 'water-surface'})
                 self.n_rebounds += 1
 
                 if self.n_rebounds_max > -1 and self.n_rebounds > self.n_rebounds_max:
                     self.XZ = np.insert(self.XZ, i+1, P_new, axis=0)  # Add final point
-                    if self.verbose: print(f'{self.__vi}DEBUG: Max number of rebounds reached ({self.n_rebounds_max})')
+                    if self.verbose: print(f'{self.__vi}Stopping: Max number of rebounds reached ({self.n_rebounds_max})')
                     self.stop_reason = 'max-rebounds'
                     break
-                if self.verbose: print(f'{self.__vi}DEBUG: #{self.n_rebounds} - Ceiling rebound. New dir: {k}')
+                if self.verbose: print(f'{self.__vi}Rebound #{self.n_rebounds} - ceiling. New dir: {k}')
             
             else:
                 P_new = np.array([x_new, z_new])
@@ -197,14 +197,14 @@ class Ray2D:
                 z_new = self.env.range_min[1]
                 x_new = x_dir * (z_new - z) / dx_z + x
                 self.XZ = np.insert(self.XZ, i+1, np.array([x_new, z_new]), axis=0)  # Add final point
-                if self.verbose: print(f'{self.__vi}DEBUG: Out of bounds (z-axis min)')
+                if self.verbose: print(f'{self.__vi}Stopping: Out of bounds (z-axis min)')
                 self.stop_reason = 'exit-zmin'
                 break
             elif z_new > self.env.range_max[1]:
                 z_new = self.env.range_max[1]
                 x_new = x_dir * (z_new - z) / dx_z + x
                 self.XZ = np.insert(self.XZ, i+1, np.array([x_new, z_new]), axis=0)  # Add final point
-                if self.verbose: print(f'{self.__vi}DEBUG: Out of bounds (z-axis max)')
+                if self.verbose: print(f'{self.__vi}Stopping: Out of bounds (z-axis max)')
                 self.stop_reason = 'exit-zmax'
                 break
 
@@ -227,13 +227,13 @@ class Ray2D:
 
             # Check backpropagation
             if not self.backprop and x_dir < 0:
-                if self.verbose: print(f'{self.__vi}DEBUG: Backpropagation')
+                if self.verbose: print(f'{self.__vi}Stopping: Backpropagation')
                 self.stop_reason = 'backprop'
                 break
             
             # Check number of steps (verbose only)
             if i == self.n_steps_max - 1:
-                if self.verbose: print(f'{self.__vi}DEBUG: Maximum iterations reached ({self.n_steps_max})')
+                if self.verbose: print(f'{self.__vi}Stopping: Maximum iterations reached ({self.n_steps_max})')
                 self.stop_reason = 'max-iter'
 
         # Count simulation steps
