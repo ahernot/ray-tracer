@@ -10,6 +10,8 @@
 
 
 import numpy as np
+from scipy.fft import fft, fftfreq, ifft
+
 # import matplotlib.pyplot as plt
 from operator import itemgetter
 import itertools
@@ -23,7 +25,7 @@ from ray import Ray2D, RayPack2D
 
 class Simulation2D:
 
-    def __init__ (self, env: Environment2D, source, **kwargs):
+    def __init__ (self, env: Environment2D, source: np.ndarray, **kwargs):
         """
         Simulation (total_energy=1.)
         :param env: Simulation environment
@@ -306,7 +308,7 @@ class EigenraySim2D (Simulation2D):
             if self.verbose: print(f'{self._Simulation2D__vi}Refine #{self.n_refines} mean distance: {self.dist_avg}')  # if self.verbose
             self.pack_default = pack_refine  # Set default raypack
 
-    def get_filter (self, *freqs, **kwargs) -> np.ndarray:
+    def get_filter (self, *freqs, **kwargs):
         """
         :param kwargs/pack: Pack to generate the filter for
         """
@@ -314,11 +316,39 @@ class EigenraySim2D (Simulation2D):
         pack = kwargs.get('pack', self.pack_default)
         raypack = self.raypacks [pack]
 
-        for ray in raypack.rays:
+        filter_data = list()
+        for ray in raypack.rays[:1]:  #TODO: remove
+            # Generate frequencies
             ray.populate(*freqs)
-            # this generates an absorption dictionary but also the ray knows what its target is so why not generate an absorption value per frequency and just return these in a list
-            #   like: return [self.G_target[freq] for freq in freq_gen]
-            pass
+
+            # Fetch filter data
+            offset, filter_func = ray.T_target, ray.calc_Tmult_target
+            filter_data.append({'offset': offset, 'filter_func': filter_func})
+
+        def filter (sample_rate, signal):
+            # TODO: multi-channel signals
+
+            # Initialise signal
+            signal_filtered = np.zeros_like(signal)
+
+            # Apply Fourier transform to signal
+            samples_nb = signal.shape[0]
+            yf = fft(signal)
+            xf = fftfreq(samples_nb, 1/sample_rate)
+
+
+            for ray_filter in filter_data:
+                # Apply filter on Fourier transform of signal
+                filter = ray_filter['filter_func'] (xf)
+                yf_filtered = np.multiply(filter, yf)
+                
+                # Add temporal filtered signal to result
+                signal_filtered += ifft(yf_filtered).real  # TODO: not real?
+                
+            return sample_rate, signal_filtered
+
+        return filter
 
         # Then add the gains together (with delays/offsets) and interpolate: get one gain and one phase value per frequency
         # Return as a complex numpy array
+

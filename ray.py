@@ -48,6 +48,8 @@ class Ray2D:
         self.freqs = list()
         self.G = dict()
         self.Tmult = dict()
+        # self.G_target = np.empty((0, 2))
+        self.Tmult_target = np.empty((0, 2))
 
         self.range_min = np.zeros(2)
         self.range_max = np.zeros(2)
@@ -244,6 +246,10 @@ class Ray2D:
         self.dT = self.dL / self.C[:-1]  # dT at each arrival point (excluding initial point)
         self.T = np.cumsum(np.insert(self.dT, 0, 0.))
 
+        # Calculate step closest to target (on the x-axis)
+        self.step_target = np.argmin(np.abs(self.XZ[:, 0] - self.target[0])) if self.target is not None else None
+        self.T_target = self.T[self.step_target] if self.target is not None else None
+
         # Generate interpolated path function
         self.calc_z = interpolate.interp1d(self.XZ[:, 0], self.XZ[:, 1], kind='linear')
 
@@ -288,6 +294,15 @@ class Ray2D:
             self.Tmult[freq] = Tmult
             self.freqs.append(freq)
 
+            # Save target values  # TODO: move this to simulation? or raypack?
+            if (self.target is not None) and (len(G) > self.step_target):
+                # self.G_target = np.insert(self.G_target, 0, np.array([freq, G[self.step_target]]), axis=0)
+                self.Tmult_target = np.insert(self.Tmult_target, 0, np.array([freq, Tmult[self.step_target]]), axis=0)
+        
+        # Sort target arrays
+        # self.G_target = np.sort(self.G_target, axis=0)
+        self.Tmult_target = np.sort(self.Tmult_target, axis=0)
+        self.calc_Tmult_target = interpolate.interp1d(self.Tmult_target[:, 0], self.Tmult_target[:, 1], kind='linear')
 
 
 class RayPack2D:
