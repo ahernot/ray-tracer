@@ -36,8 +36,10 @@ class Environment2D:
         # self.range_max = np.array([100000, 0])  # # TODO: set default values
 
         # Values for Bathy.Map map - TODO: generate ranges based on bathy profile bounds
-        self.range_min = np.array([0, -5500])
-        self.range_max = np.array([3700, 0])  #3740
+        # self.range_min = np.array([0, -5500])
+        # self.range_max = np.array([3700, 0])  #3740
+        self.range_min = np.array([0, -10000])
+        self.range_max = np.array([100000, 0])  #3740
         self.size = self.range_max - self.range_min
 
         # Generate physics environment
