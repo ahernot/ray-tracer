@@ -8,6 +8,7 @@
 # TODO: Make RayPack2D.add() work when adding a new ray without generating it using Simulation2D: all the power recalculations must be done from within the raypack
 # TODO: add scanning and refining timers
 # TODO: add freq_min, freq_max parameters to always load in [-24000, 24000] Hz
+# TODO: Simulation2D.n_rays which counts all rays in all raypacks
 
 
 import numpy as np
@@ -312,40 +313,44 @@ class EigenraySim2D (Simulation2D):
     def get_filter (self, *freqs, **kwargs):
         """
         :param kwargs/pack: Pack to generate the filter for
+        # Signal must begin when fastest ray gets there
         """
-
+        # Load raypack
         pack = kwargs.get('pack', self.pack_default)
         raypack = self.raypacks [pack]
 
-        filter_data = list()
-        for ray in raypack.rays[:1]:  #TODO: remove
-            # Generate frequencies
+        filter_data, offsets = list(), list()
+        for ray in raypack.rays:
+            # Populate ray
             ray.populate(*freqs)
 
-            # Fetch filter data
+            # Get ray data
             offset, filter_func = ray.T_target, ray.calc_Tmult_target
             filter_data.append({'offset': offset, 'filter_func': filter_func})
+            offsets.append(offset)
+        
+        # Process ray time offsets
+        offset_min = np.min(offsets)
+        offset_max = np.max(offsets)
+        time_add = offset_max - offset_min
 
-        def filter (sample_rate, signal):  # TODO: multi-channel signals
-            signal_filtered = np.zeros_like(signal, dtype=np.float64)
-
+        # Create filtering function  # TODO: multi-channel signals
+        def filter (sample_rate, signal):
+            n_samples = signal.shape[0]
+            data_add = np.ceil(time_add * sample_rate).astype(int)
+            signal_filtered = np.zeros(n_samples + data_add, dtype=np.float64)
             # Apply Fourier transform to signal
-            samples_nb = signal.shape[0]
             yf = fft(signal)
-            xf = fftfreq(samples_nb, 1/sample_rate)
-
+            xf = fftfreq(n_samples, 1/sample_rate)
             for ray_filter in filter_data:
+                # Calculate offset in datapoints
+                time_offset = ray_filter['offset'] - np.min(offsets)
+                data_offset = np.ceil(time_offset * sample_rate).astype(int)
                 # Apply filter on Fourier transform of signal
                 filter = ray_filter['filter_func'] (xf)
                 yf_filtered = np.multiply(filter, yf)
-                
                 # Add temporal filtered signal to result
-                signal_filtered += ifft(yf_filtered).real  # TODO: not real?
-                
+                signal_filtered [data_offset:data_offset+n_samples] += ifft(yf_filtered).real  # TODO: not real? => TODO: return the FILTER as a complex numpy array... or as a numpy filter even, if these exist?
             return sample_rate, signal_filtered
 
-        return filter
-
-        # Then add the gains together (with delays/offsets) and interpolate: get one gain and one phase value per frequency
-        # Return as a complex numpy array
-
+        return filter        

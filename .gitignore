@@ -3,5 +3,6 @@ topography/bathymetry_tests.py
 
 # Data
 src/asc/MNT_MED100m_GDL-CA_HOMONIM_WGS84_NM_ZNEG.asc
-src/wav/sig-test.wav
-src/wav/sig-test-filtered.wav
+
+src/wav/*.wav
+out/*.wav
