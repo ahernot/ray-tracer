@@ -7,6 +7,7 @@
 # TODO: Simulation2D.__repr__()
 # TODO: Make RayPack2D.add() work when adding a new ray without generating it using Simulation2D: all the power recalculations must be done from within the raypack
 # TODO: add scanning and refining timers
+# TODO: add freq_min, freq_max parameters to always load in [-24000, 24000] Hz
 
 
 import numpy as np
@@ -325,17 +326,13 @@ class EigenraySim2D (Simulation2D):
             offset, filter_func = ray.T_target, ray.calc_Tmult_target
             filter_data.append({'offset': offset, 'filter_func': filter_func})
 
-        def filter (sample_rate, signal):
-            # TODO: multi-channel signals
-
-            # Initialise signal
-            signal_filtered = np.zeros_like(signal)
+        def filter (sample_rate, signal):  # TODO: multi-channel signals
+            signal_filtered = np.zeros_like(signal, dtype=np.float64)
 
             # Apply Fourier transform to signal
             samples_nb = signal.shape[0]
             yf = fft(signal)
             xf = fftfreq(samples_nb, 1/sample_rate)
-
 
             for ray_filter in filter_data:
                 # Apply filter on Fourier transform of signal
