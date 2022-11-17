@@ -301,8 +301,12 @@ class Ray2D:
         
         # Sort target arrays
         # self.G_target = np.sort(self.G_target, axis=0)
-        self.Tmult_target = np.sort(self.Tmult_target, axis=0)
-        self.calc_Tmult_target = interpolate.interp1d(self.Tmult_target[:, 0], self.Tmult_target[:, 1], kind='linear')
+        self.Tmult_target = np.sort(self.Tmult_target, axis=0)        
+        self.calc_Tmult_target = interpolate.interp1d(
+            np.concatenate( (-1 * self.Tmult_target[::-1, 0], self.Tmult_target[:, 0]) ),
+            np.concatenate( (self.Tmult_target[::-1, 1], self.Tmult_target[:, 1]) ),
+            kind='linear'
+        )
 
 
 class RayPack2D:
