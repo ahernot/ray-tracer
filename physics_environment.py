@@ -48,7 +48,7 @@ class PhysicsEnvironment2D:
         self.range_min = range_min
         self.range_max = range_max
 
-        self.x = np.arange(self.range_min[0], self.range_max[0] + self.res_z, self.res_x) if self.res_x != 0 else np.array([X_DEFAULT])  # Check if x-invariant
+        self.x = np.arange(self.range_min[0], self.range_max[0] + self.res_x, self.res_x) if self.res_x != 0 else np.array([X_DEFAULT])  # Check if x-invariant
         self.z = np.arange(self.range_min[1], self.range_max[1] + self.res_z, self.res_z) if self.res_z != 0 else np.array([Z_DEFAULT])  # Check if z-invariant
 
 
