@@ -158,6 +158,7 @@ class Ray2D:
                 
                 if self.n_rebounds_max > -1 and self.n_rebounds > self.n_rebounds_max:
                     self.XZ = np.insert(self.XZ, i+1, P_new, axis=0)  # Add final point
+                    # TODO: CAREFUL: INSERTING WITHOUT BOUND CHECK => MAKE SEPARATE BOUND CHECK AND RECTIFICATION FUNCTION
                     if self.verbose: print(f'{self.__vi}Stopping: Max number of rebounds reached ({self.n_rebounds_max})')
                     self.stop_reason = 'max-rebounds'
                     break
