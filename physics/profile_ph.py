@@ -24,4 +24,10 @@ pH_profile = np.array([
     [-10000, 7.74]
 ])
 
-calc_pH = interpolate.interp1d(pH_profile.T[0][::-1], pH_profile.T[1][::-1], kind='linear')
+calc_pH = interpolate.interp1d(
+    pH_profile.T[0][::-1],
+    pH_profile.T[1][::-1],
+    kind='linear',
+    bounds_error=False,
+    fill_value='extrapolate'
+)

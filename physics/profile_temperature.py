@@ -27,4 +27,10 @@ temperature_profile = np.array([
     [-10000, 3]
 ])
 
-calc_T = interpolate.interp1d(temperature_profile.T[0][::-1], temperature_profile.T[1][::-1], kind='quadratic')
+calc_T = interpolate.interp1d(
+    temperature_profile.T[0][::-1],
+    temperature_profile.T[1][::-1],
+    kind='quadratic',
+    bounds_error=False,
+    fill_value='extrapolate'
+)
