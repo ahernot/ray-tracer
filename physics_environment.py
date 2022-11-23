@@ -4,6 +4,7 @@
 # TODO: add a lowres setting into Environment2D
 # TODO: xx, yy = np.meshgrid(x, y) ?
 # TODO: quadratic or linear interpolation?
+# TODO: rename size to range
 
 
 import numpy as np
@@ -47,11 +48,14 @@ class PhysicsEnvironment2D:
         self.res_z = kwargs.get('res_z', RES_Z_DEFAULT)  # TODO: set default values
         self.range_min = range_min
         self.range_max = range_max
+        self.size = self.range_max - self.range_min
 
-        self.x = np.arange(self.range_min[0], self.range_max[0] + self.res_x, self.res_x) if self.res_x != 0 else np.array([X_DEFAULT])  # Check if x-invariant
-        self.z = np.arange(self.range_min[1], self.range_max[1] + self.res_z, self.res_z) if self.res_z != 0 else np.array([Z_DEFAULT])  # Check if z-invariant
+        n_x = int(self.size[0] // self.res_x) + 1 if self.res_x != 0 else 1  # Add one extra point to supersede resolution
+        n_z = int(self.size[1] // self.res_z) + 1 if self.res_z != 0 else 1  # Add one extra point to supersede resolution
+        self.x = np.linspace(self.range_min[0], self.range_max[0], n_x) if self.res_x != 0 else np.array([X_DEFAULT])  # Check if x-invariant
+        self.z = np.linspace(self.range_min[1], self.range_max[1], n_z) if self.res_z != 0 else np.array([Z_DEFAULT])  # Check if z-invariant
 
-
+    
     def generate (self):
 
         # Already interpolated (and interpolations not needed)
