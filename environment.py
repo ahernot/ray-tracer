@@ -29,6 +29,17 @@ class Environment2D:
         :param res_z:
         """
 
+        # Initialise range and resolution
+        self.res_x = kwargs.get('res_x', RES_X_DEFAULT)
+        self.res_z = kwargs.get('res_z', RES_Z_DEFAULT)
+        self.range_min = range_min
+        self.range_max = range_max
+        self.size = self.range_max - self.range_min
+
+        # Generate physics environment
+        self.penv = PhysicsEnvironment2D(self.range_min, self.range_max, res_x=self.res_x, res_z=self.res_z)
+        self.penv.generate()
+
         # Process environment bounds
         self.floor = floor
         self.ceil = ceiling
@@ -40,28 +51,7 @@ class Environment2D:
         self.dx_ceil = interpolate.interp1d(self.penv.x, self.__dx_ceil_sampled, kind='quadratic')  # ceiling is static
         self.floor_avg = np.mean(self.__floor_sampled)
         self.ceil_avg = np.mean(self.__ceil_sampled)
-
-
         
-        # self.range_min = np.array([0, -5500])  # TODO: set default values
-        # self.range_max = np.array([100000, 0])  # # TODO: set default values
-        # Values for Bathy.Map map - TODO: generate ranges based on bathy profile bounds
-        # self.range_min = np.array([0, -5500])
-        # self.range_max = np.array([3700, 0])  #3740
-        # self.range_min = np.array([0, -10000])
-        # self.range_max = np.array([100000, 0])  #3740
-
-
-        # Initialise range and resolution
-        self.res_x = kwargs.get('res_x', RES_X_DEFAULT)
-        self.res_z = kwargs.get('res_z', RES_Z_DEFAULT)
-        self.range_min = range_min
-        self.range_max = range_max
-        self.size = self.range_max - self.range_min
-
-        # Generate physics environment
-        self.penv = PhysicsEnvironment2D(self.range_min, self.range_max, res_x=self.res_x, res_z=self.res_z)
-        self.penv.generate()
 
     def __repr__ (self):
         return self.__class__.__name__ + ' object'
