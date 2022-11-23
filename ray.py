@@ -4,7 +4,6 @@
 # TODO: Increase pace when far enough away from borders
 # TODO: Ray2D.reverse()
 # TODO: RayPack2D.__repr__()
-# TODO: IF TARGET: FIND THE STEP ID CLOSEST TO THE TARGET AND USE THIS (or interpolate between this and this+1?) 
 # IMPORTANT: Always have a margin of at least dx or dz between the simulation bound and the features (floor / ceiling)
 
 
