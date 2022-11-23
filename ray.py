@@ -157,7 +157,7 @@ class Ray2D:
             if out in (1, 2):
                 x_new, z_new = x_new_temp, z_new_temp
                 self.stop_reason = out_val = out_vals[out+1]
-                print(f'{self.__vi}Stopping: Out of bounds ({out_val})')
+                if self.verbose: print(f'{self.__vi}Stopping: Out of bounds ({out_val})')
                 break
 
 
@@ -211,7 +211,7 @@ class Ray2D:
             if out:
                 x_new, z_new = x_new_temp, z_new_temp
                 self.stop_reason = out_val = out_vals[out+1]
-                print(f'{self.__vi}Stopping: Out of bounds ({out_val})')
+                if self.verbose: print(f'{self.__vi}Stopping: Out of bounds ({out_val})')
                 break
 
 
