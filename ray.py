@@ -262,7 +262,7 @@ class Ray2D:
         self.T_target = self.T[self.step_target] if self.target is not None else None
 
         # Generate interpolated path function
-        self.calc_z = interpolate.interp1d(self.XZ[:, 0], self.XZ[:, 1], kind='linear')
+        self.calc_z = interpolate.interp1d(self.XZ[:, 0], self.XZ[:, 1], kind='linear', bounds_error=True)
 
         # Calculate distance to target  # TODO: better check interpolation range (if range_x < target.x) and find target step
         if self.target is not None:
@@ -316,7 +316,8 @@ class Ray2D:
         self.calc_Tmult_target = interpolate.interp1d(
             np.concatenate( (-1 * self.Tmult_target[::-1, 0], self.Tmult_target[:, 0]) ),
             np.concatenate( (self.Tmult_target[::-1, 1], self.Tmult_target[:, 1]) ),
-            kind='linear'
+            kind='linear',
+            bounds_error=True
         )
 
 
