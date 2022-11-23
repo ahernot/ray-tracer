@@ -62,19 +62,19 @@ class PhysicsEnvironment2D:
 
         # Velocity
         self.c = physics.model_velocity.sound_velocity_medwin (self.z, self.S, self.T)
-        self.calc_c = interpolate.interp1d (self.z, self.c, kind='quadratic')
+        self.calc_c = interpolate.interp1d (self.z, self.c, kind='quadratic', bounds_error=False, fill_value='extrapolate')
         self.dz_c = np.gradient(self.c) / self.res_z
-        self.calc_dz_c = interpolate.interp1d (self.z, self.dz_c, kind='quadratic')
+        self.calc_dz_c = interpolate.interp1d (self.z, self.dz_c, kind='quadratic', bounds_error=False, fill_value='extrapolate')
 
         # Rho
         self.rho = physics.model_rho.calc_rho (self.z, self.S, self.T, self.P)
-        self.calc_rho = interpolate.interp1d (self.z, self.rho, kind='quadratic')
+        self.calc_rho = interpolate.interp1d (self.z, self.rho, kind='quadratic', bounds_error=False, fill_value='extrapolate')
 
         # Absorption (keep full frequency resolution, interpolate spatially)
         self.__dl_dG_coefs = physics.model_absorption.calc_dl_dG_coefs (self.z, self.T, self.S, self.pH)
-        self.__calc_dl_dG_coefs_interp = interpolate.interp1d (self.z, self.__dl_dG_coefs, axis=1, kind='quadratic')
+        self.__calc_dl_dG_coefs_interp = interpolate.interp1d (self.z, self.__dl_dG_coefs, axis=1, kind='quadratic', bounds_error=False, fill_value='extrapolate')
         self.calc_dl_dG = lambda f, z: physics.model_absorption.calc_dl_dG (f, z, self.__calc_dl_dG_coefs_interp)
 
         # Impedance
         self.Z = physics.model_impedance.calc_Z(self.rho, self.c)
-        self.calc_Z = interpolate.interp1d(self.z, self.Z, kind='quadratic')
+        self.calc_Z = interpolate.interp1d(self.z, self.Z, kind='quadratic', bounds_error=False, fill_value='extrapolate')
