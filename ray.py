@@ -5,7 +5,7 @@
 # TODO: Ray2D.reverse()
 # TODO: RayPack2D.__repr__()
 # TODO: IF TARGET: FIND THE STEP ID CLOSEST TO THE TARGET AND USE THIS (or interpolate between this and this+1?) 
-
+# IMPORTANT: Always have a margin of at least dx or dz between the simulation bound and the features (floor / ceiling)
 
 
 import numpy as np
@@ -79,6 +79,33 @@ class Ray2D:
         :param kwargs/verbose_depth_max: Verbose max depth
         """
 
+        out_vals = ['exit-xmin', 'exit-xmax', 'exit-zmin', 'exit-zmax']
+        def fit_to_bounds (x_prev, x_new, z_prev, z_new, dx_z):
+            _out = 0
+
+            # Check simulation horizontal bounds
+            if x < self.env.range_min[0]:
+                x_new = self.env.range_min[0]
+                z_new = -1 * dx_z * (x_new - x_prev) + z_prev  # Only hit when going left (x_dir = -1)
+                _out = 1
+            elif x_new > self.env.range_max[0]:
+                x_new = self.env.range_max[0]
+                z_new = dx_z * (x_new - x_prev) + z_prev  # Only hit when going right (x_dir = 1)
+                _out = 2
+            
+            # Check simulation vertical bounds
+            if z_new < self.env.range_min[1]:
+                z_new = self.env.range_min[1]
+                x_new = x_dir * (z_new - z_prev) / dx_z + x_prev
+                _out = 3
+            elif z_new > self.env.range_max[1]:
+                z_new = self.env.range_max[1]
+                x_new = x_dir * (z_new - z_prev) / dx_z + x_prev
+                _out = 4
+            
+            return x_new, z_new, _out
+        
+
         # Verbose
         self.verbose = kwargs.get('verbose', False)
         self.verbose_depth_max = kwargs.get('verbose_depth_max', 0)
@@ -125,20 +152,12 @@ class Ray2D:
             x_new, z_new = P_new = P + k
 
 
-            # Check simulation horizontal bounds
-            if x_new < self.env.range_min[0]:
-                x_new = self.env.range_min[0]
-                z_new = -1 * dx_z * (x_new - x) + z  # Only hit when going left (x_dir = -1)
-                self.XZ = np.insert(self.XZ, i+1, np.array([x_new, z_new]), axis=0)  # Add final point
-                if self.verbose: print(f'{self.__vi}Stopping: Out of bounds (x-axis min)')
-                self.stop_reason = 'exit-xmin'
-                break 
-            elif x_new > self.env.range_max[0]:
-                x_new = self.env.range_max[0]
-                z_new = dx_z * (x_new - x) + z  # Only hit when going right (x_dir = 1)
-                self.XZ = np.insert(self.XZ, i+1, np.array([x_new, z_new]), axis=0)  # Add final point
-                if self.verbose: print(f'{self.__vi}Stopping: Out of bounds (x-axis max)')
-                self.stop_reason = 'exit-xmax'
+            # Check simulation horizontal bounds (for horizotnally-interpolated functions)
+            x_new_temp, z_new_temp, out = fit_to_bounds (x, x_new, z, z_new, dx_z)
+            if out in (1, 2):
+                x_new, z_new = x_new_temp, z_new_temp
+                self.stop_reason = out_val = out_vals[out+1]
+                print(f'{self.__vi}Stopping: Out of bounds ({out_val})')
                 break
 
 
@@ -146,7 +165,6 @@ class Ray2D:
             if self.env.floor and z_new < self.env.floor(x_new):  # Calculate intersection point and new direction vector
                 x_new = float( fsolve( lambda x1: self.env.floor(x) - dx_z * (x1 - x) - z, x0=x ))
                 z_new = self.env.floor(x_new)
-                P_new = np.array([x_new, z_new])
                 u = np.array([1., self.env.dx_floor(x_new)])  # Direction of floor
                 n = np.array([-1*u[1], u[0]])  # Normal of floor, going up
                 k = np.dot(k, u)*u - np.dot(k, n)*n  # Direction of reflected ray
@@ -157,8 +175,9 @@ class Ray2D:
                 self.n_rebounds += 1
                 
                 if self.n_rebounds_max > -1 and self.n_rebounds > self.n_rebounds_max:
+                    x_new, z_new, out = fit_to_bounds (x, x_new, z, z_new, dx_z)  # Check bounds
+                    P_new = np.array([x_new, z_new])
                     self.XZ = np.insert(self.XZ, i+1, P_new, axis=0)  # Add final point
-                    # TODO: CAREFUL: INSERTING WITHOUT BOUND CHECK => MAKE SEPARATE BOUND CHECK AND RECTIFICATION FUNCTION
                     if self.verbose: print(f'{self.__vi}Stopping: Max number of rebounds reached ({self.n_rebounds_max})')
                     self.stop_reason = 'max-rebounds'
                     break
@@ -168,7 +187,6 @@ class Ray2D:
             elif self.env.ceil and z_new > self.env.ceil(x_new):
                 x_new = float( fsolve( lambda x1: self.env.ceil(x) - dx_z * (x1 - x) - z, x0=x ))
                 z_new = self.env.ceil(x_new)
-                P_new = np.array([x_new, z_new])
                 u = np.array([1., self.env.dx_ceil(x_new)])  # Direction of ceiling
                 n = np.array([u[1], -1*u[0]])  # Normal of ceiling, going down
                 k = np.dot(k, u)*u - np.dot(k, n)*n  # Direction of reflected ray
@@ -179,34 +197,26 @@ class Ray2D:
                 self.n_rebounds += 1
 
                 if self.n_rebounds_max > -1 and self.n_rebounds > self.n_rebounds_max:
+                    x_new, z_new, out = fit_to_bounds (x, x_new, z, z_new, dx_z)  # Check bounds
+                    P_new = np.array([x_new, z_new])
                     self.XZ = np.insert(self.XZ, i+1, P_new, axis=0)  # Add final point
                     if self.verbose: print(f'{self.__vi}Stopping: Max number of rebounds reached ({self.n_rebounds_max})')
                     self.stop_reason = 'max-rebounds'
                     break
                 if self.verbose: print(f'{self.__vi}Rebound #{self.n_rebounds} - ceiling. New dir: {k}')
-            
-            else:
-                P_new = np.array([x_new, z_new])
 
 
-            # Check simulation vertical bounds
-            if z_new < self.env.range_min[1]:
-                z_new = self.env.range_min[1]
-                x_new = x_dir * (z_new - z) / dx_z + x
-                self.XZ = np.insert(self.XZ, i+1, np.array([x_new, z_new]), axis=0)  # Add final point
-                if self.verbose: print(f'{self.__vi}Stopping: Out of bounds (z-axis min)')
-                self.stop_reason = 'exit-zmin'
-                break
-            elif z_new > self.env.range_max[1]:
-                z_new = self.env.range_max[1]
-                x_new = x_dir * (z_new - z) / dx_z + x
-                self.XZ = np.insert(self.XZ, i+1, np.array([x_new, z_new]), axis=0)  # Add final point
-                if self.verbose: print(f'{self.__vi}Stopping: Out of bounds (z-axis max)')
-                self.stop_reason = 'exit-zmax'
+            # Check simulation bounds (all)
+            x_new_temp, z_new_temp, out = fit_to_bounds (x, x_new, z, z_new, dx_z)
+            if out:
+                x_new, z_new = x_new_temp, z_new_temp
+                self.stop_reason = out_val = out_vals[out+1]
+                print(f'{self.__vi}Stopping: Out of bounds ({out_val})')
                 break
 
 
             # Add new point
+            P_new = np.array([x_new, z_new])
             self.XZ = np.insert(self.XZ, i+1, P_new, axis=0)
             P = P_new.copy()
 
