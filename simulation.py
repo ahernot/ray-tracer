@@ -319,14 +319,23 @@ class EigenraySim2D (Simulation2D):
         pack = kwargs.get('pack', self.pack_default)
         raypack = self.raypacks [pack]
 
+        # Generate aperture percentages
+        angles_sorted = np.sort(list(raypack.angles.keys()))
+        diff = np.diff(angles_sorted) / 2
+        aperture_max = np.max(angles_sorted) - np.min(angles_sorted)
+        aperture_left = np.insert(diff, 0, diff[0])
+        aperture_right = np.insert(diff, diff.shape[0], diff[-1])
+        aperture_percents = (aperture_left + aperture_right) / aperture_max
+
         filter_data, offsets = list(), list()
-        for ray in raypack.rays:
+        for i, angle in enumerate(angles_sorted):
             # Populate ray
+            ray = raypack.angles[angle]
             ray.populate(*freqs)
 
             # Get ray data
             offset, filter_func = ray.T_target, ray.calc_Tmult_target
-            filter_data.append({'offset': offset, 'filter_func': filter_func})
+            filter_data.append({'offset': offset, 'filter_func': filter_func, 'aperture_mult': aperture_percents[i]})
             offsets.append(offset)
         
         # Process ray time offsets
@@ -337,20 +346,27 @@ class EigenraySim2D (Simulation2D):
         # Create filtering function  # TODO: multi-channel signals
         def filter (sample_rate, signal):
             n_samples = signal.shape[0]
-            data_add = np.ceil(time_add * sample_rate).astype(int)
+            data_add = np.ceil(time_add * sample_rate).astype(int)  # Calculate number of datapoints to add
             signal_filtered = np.zeros(n_samples + data_add, dtype=np.float64)
+
             # Apply Fourier transform to signal
             yf = fft(signal)
             xf = fftfreq(n_samples, 1/sample_rate)
+
             for ray_filter in filter_data:
                 # Calculate offset in datapoints
                 time_offset = ray_filter['offset'] - np.min(offsets)
                 data_offset = np.ceil(time_offset * sample_rate).astype(int)
+
                 # Apply filter on Fourier transform of signal
                 filter = ray_filter['filter_func'] (xf)
                 yf_filtered = np.multiply(filter, yf)
+
                 # Add temporal filtered signal to result
-                signal_filtered [data_offset:data_offset+n_samples] += ifft(yf_filtered).real  # TODO: not real? => TODO: return the FILTER as a complex numpy array... or as a numpy filter even, if these exist?
+                sig_filt_ray = ifft(yf_filtered).real
+                mult = ray_filter['aperture_mult']
+                signal_filtered [data_offset:data_offset+n_samples] += sig_filt_ray * mult  # TODO: not real? => TODO: return the FILTER as a complex numpy array... or as a numpy filter even, if these exist?
+            
             return sample_rate, signal_filtered
 
         return filter        

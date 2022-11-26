@@ -344,14 +344,15 @@ class RayPack2D:
     def add (self, *rays: Ray2D):
 
         for ray in rays:
+            if ray.angle in self.angles: continue  # Skip already generated rays
             # Update counters
             self.n_rays += 1
             self.n_angles += 0 if ray.angle in self.angles else 1
 
             # Add ray to database
             self.rays .append(ray)
+            self.angles[ray.angle] = ray  # Unicity of ray per angle
             self.stop_reasons[ray.stop_reason] = self.stop_reasons[ray.stop_reason] + [ray] if ray.stop_reason in self.stop_reasons else [ray]
-            self.angles[ray.angle] = self.angles[ray.angle] + [ray] if ray.angle in self.angles else [ray]
             self.dist[ray.dist_to_target] = self.dist[ray.dist_to_target] + [ray] if ray.dist_to_target in self.dist else [ray]
 
             # Update plot range
