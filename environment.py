@@ -38,7 +38,6 @@ class Environment2D:
 
         # Generate physics environment
         self.penv = PhysicsEnvironment2D(self.range_min, self.range_max, res_x=self.res_x, res_z=self.res_z)
-        self.penv.generate()
 
         # Process environment bounds
         self.floor = floor

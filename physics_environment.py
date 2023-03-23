@@ -55,8 +55,10 @@ class PhysicsEnvironment2D:
         self.x = np.linspace(self.range_min[0], self.range_max[0], n_x) if self.res_x != 0 else np.array([X_DEFAULT])  # Check if x-invariant
         self.z = np.linspace(self.range_min[1], self.range_max[1], n_z) if self.res_z != 0 else np.array([Z_DEFAULT])  # Check if z-invariant
 
-    
-    def generate (self):
+        # Generate
+        self.__generate()
+
+    def __generate (self):
 
         # Already interpolated (and interpolations not needed)
         self.S = physics.profile_salinity.calc_S (self.z)

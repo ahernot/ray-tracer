@@ -18,6 +18,7 @@ from physics.model_reflection import calc_refcoef_surface, calc_refcoef_sediment
 from environment import Environment2D
 
 
+# TODO: Remove target from Ray2D
 
 class Ray2D:
 
@@ -260,19 +261,19 @@ class Ray2D:
         # Count simulation steps
         self.steps = self.XZ.shape[0]
 
-        # Update range
+        # Populate ray's effective range
         self.range_min = np.array([np.min(self.XZ[:, 0]), np.min(self.XZ[:, 1])])
         self.range_max = np.array([np.max(self.XZ[:, 0]), np.max(self.XZ[:, 1])])
 
         # Calculate integration segments
         self.dL = np.linalg.norm(np.diff(self.XZ, axis=0), axis=1)  # dL at each arrival point (excluding initial point)
         self.L = np.cumsum(np.insert(self.dL, 0, 0.))
-        self.C = self.env.penv.calc_c(self.XZ[:, 1])  # velocity at each point
+        self.C = self.env.penv.calc_c(self.XZ[:, 1])  # Velocity at each point
         self.dT = self.dL / self.C[:-1]  # dT at each arrival point (excluding initial point)
-        self.T = np.cumsum(np.insert(self.dT, 0, 0.))
+        self.T = np.cumsum(np.insert(self.dT, 0, 0.))  # Time from ray launch at each point
 
-        # Calculate step closest to target (on the x-axis)
-        self.step_target = np.argmin(np.abs(self.XZ[:, 0] - self.target[0])) if self.target is not None else None
+        # Calculate time at target  # calculate step closest to target (on the x-axis)  # TODO: DISTANCE ON BOTH AXES (linalg.norm)
+        self.step_target = np.argmin(np.abs(self.XZ[:, 0] - self.target[0])) if self.target is not None else None  # Step closest to target on the x-axis
         self.T_target = self.T[self.step_target] if self.target is not None else None
 
         # Generate interpolated path function
@@ -284,7 +285,7 @@ class Ray2D:
             except: self.dist_to_target = np.nan
         
         self.__is_propagated = True
-    
+
     def populate (self, *freqs):
 
         for freq in freqs:
