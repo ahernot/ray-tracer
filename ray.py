@@ -105,27 +105,30 @@ class Ray2D:
             return x_new, z_new, _out
         
 
-        # Verbose
+        # Verbose param
         self.verbose = kwargs.get('verbose', False)
         self.verbose_depth_max = kwargs.get('verbose_depth_max', 0)
         self.verbose_depth =  kwargs.get('verbose_depth', 0)
         if self.verbose: self.verbose_next = (self.verbose_depth < self.verbose_depth_max) or (self.verbose_depth_max == -1)
         self.__vi = '\t' * self.verbose_depth + self.__class__.__name__ + ': '
 
+        # Exit if already completed
         if self.__is_propagated:
             if self.verbose: print(f'{self.__vi}ERROR: Ray already propagated')
             return
         
-        self.backprop = kwargs.get('backprop', True)
+        # Initialize variables (kwargs)
+        self.backprop = kwargs.get('backprop', True)  # TODO: Rename to allow_backprop
         self.n_steps_max = kwargs.get('n_steps_max', N_STEPS_MAX)
         self.n_rebounds_max = kwargs.get('n_rebounds_max', N_REBOUNDS_MAX)
         self.n_rebounds = 0
         self.__rebounds = list()
 
-        # Minimum resolutions
+        # Minimum resolutions (maximum steps)
         self.dx_max = kwargs.get('dx_max', DX_MAX_DEFAULT)
         self.dz_max = kwargs.get('dz_max', DZ_MAX_DEFAULT)
         dx_z_max = np.abs(self.dz_max / self.dx_max)  # Decision slope between both min resolutions
+
 
 
         # Initialise
@@ -135,20 +138,22 @@ class Ray2D:
         dxdx_z = 0  # no initial curvature
         x_dir = 1.  # forwards propagation
         k = np.array([x_dir, dx_z])
-        # Initialise solver
-        c = self.env.penv.calc_c(0)
+
+        # Initialise solver parameters
+        c = self.env.penv.calc_c(0)  # TODO: 0? or z0?
         mult = -1 * np.power(c / np.sin(angle), 2)  # differential equation multiplier
 
 
-        for i in range(self.n_steps_max):
 
+        # Main loop
+        for i in range(self.n_steps_max):
             # Enforce minimum resolution (k becomes this step's [dx, dz])
             if abs(dx_z) > dx_z_max: k *= self.dz_max / abs(dx_z)
             else: k *= self.dx_max
-
             # Unpack coordinates
             x, z = P
             x_new, z_new = P_new = P + k
+
 
 
             # Check simulation horizontal bounds (for horizotnally-interpolated functions)
@@ -160,10 +165,15 @@ class Ray2D:
                 break
 
 
+
+            # Project onto floor & ceiling (for rebound check)
+            z_floor_projection = self.env.floor(x_new)
+            z_ceil_projection = self.env.ceil(x_new)
+
             # Check floor rebounds
-            if self.env.floor and z_new < self.env.floor(x_new):  # Calculate intersection point and new direction vector
+            if self.env.floor and z_new < z_floor_projection:
                 x_new = float( fsolve( lambda x1: self.env.floor(x) - dx_z * (x1 - x) - z, x0=x ))
-                z_new = self.env.floor(x_new)
+                z_new = z_floor_projection
                 u = np.array([1., self.env.dx_floor(x_new)])  # Direction of floor
                 n = np.array([-1*u[1], u[0]])  # Normal of floor, going up
                 k = np.dot(k, u)*u - np.dot(k, n)*n  # Direction of reflected ray
@@ -173,6 +183,7 @@ class Ray2D:
                 self.__rebounds.append({'step': i+1, 'surface': 'sediment', 'velocity': c, 'angle': angle, 'position': P})
                 self.n_rebounds += 1
                 
+                # Stop if last allowed rebound
                 if self.n_rebounds_max > -1 and self.n_rebounds > self.n_rebounds_max:
                     x_new, z_new, out = fit_to_bounds (x, x_new, z, z_new, dx_z)  # Check bounds
                     P_new = np.array([x_new, z_new])
@@ -183,9 +194,9 @@ class Ray2D:
                 if self.verbose: print(f'{self.__vi}Rebound #{self.n_rebounds} - floor. New dir: {k}')
 
             # Check ceiling rebounds
-            elif self.env.ceil and z_new > self.env.ceil(x_new):
+            elif self.env.ceil and z_new > z_ceil_projection:
                 x_new = float( fsolve( lambda x1: self.env.ceil(x) - dx_z * (x1 - x) - z, x0=x ))
-                z_new = self.env.ceil(x_new)
+                z_new = z_ceil_projection
                 u = np.array([1., self.env.dx_ceil(x_new)])  # Direction of ceiling
                 n = np.array([u[1], -1*u[0]])  # Normal of ceiling, going down
                 k = np.dot(k, u)*u - np.dot(k, n)*n  # Direction of reflected ray
@@ -195,6 +206,7 @@ class Ray2D:
                 self.__rebounds.append({'step': i+1, 'surface': 'water-surface', 'velocity': c, 'angle': angle, 'position': P})
                 self.n_rebounds += 1
 
+                # Stop if last allowed rebound
                 if self.n_rebounds_max > -1 and self.n_rebounds > self.n_rebounds_max:
                     x_new, z_new, out = fit_to_bounds (x, x_new, z, z_new, dx_z)  # Check bounds
                     P_new = np.array([x_new, z_new])
@@ -203,6 +215,7 @@ class Ray2D:
                     self.stop_reason = 'max-rebounds'
                     break
                 if self.verbose: print(f'{self.__vi}Rebound #{self.n_rebounds} - ceiling. New dir: {k}')
+
 
 
             # Check simulation bounds (all)
@@ -214,11 +227,11 @@ class Ray2D:
                 break
 
 
+
             # Add new point
             P_new = np.array([x_new, z_new])
             self.XZ = np.insert(self.XZ, i+1, P_new, axis=0)
             P = P_new.copy()
-
             # Calculate new point's properties
             c = self.env.penv.calc_c (z_new)
             dz_c = self.env.penv.calc_dz_c (z_new)
@@ -231,16 +244,18 @@ class Ray2D:
             k = np.array([x_dir, dx_z])
 
 
+
             # Check backpropagation
             if not self.backprop and x_dir < 0:
-                if self.verbose: print(f'{self.__vi}Stopping: Backpropagation')
                 self.stop_reason = 'backprop'
+                if self.verbose: print(f'{self.__vi}Stopping: Backpropagation')
                 break
-            
-            # Check number of steps (verbose only)
+            # Check number of steps
             if i == self.n_steps_max - 1:
-                if self.verbose: print(f'{self.__vi}Stopping: Maximum iterations reached ({self.n_steps_max})')
                 self.stop_reason = 'max-iter'
+                if self.verbose: print(f'{self.__vi}Stopping: Maximum iterations reached ({self.n_steps_max})')
+                
+
 
         # Count simulation steps
         self.steps = self.XZ.shape[0]
