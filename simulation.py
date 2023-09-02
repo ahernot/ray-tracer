@@ -13,6 +13,7 @@
 
 import numpy as np
 from scipy.fft import fft, fftfreq, ifft
+import cmath
 
 # import matplotlib.pyplot as plt
 from operator import itemgetter
@@ -69,7 +70,7 @@ class Simulation2D:
         """
         Propagate rays and add them to the simulation
         :param angles: Angles
-        :param kwargs/pack: Raypack name
+        :param kwargs/pack: Raypack name  # TODO: Rename to label (can either append to pack or create a new one)
 
         :param Ray2D.__init__/kwargs/target: Target point
         :param Ray2D.propagate/kwargs/backprop: Allow backpropagation (default=True)
@@ -93,10 +94,11 @@ class Simulation2D:
             raypack.add(ray)
 
     def heatmap (self, **kwargs):
+        # DEPRECATED FUNCTION
         """
         Generate heatmap of ray power
         kwargs
-        :param res: Resolution (in meters) - # TODO? must be less precise than the simulation's max dz and dx
+        :param resolution (array, x and y): Resolution (in meters) - # TODO? must be less precise than the simulation's max dz and dx
         :param n_reductions:
         :param cutoff: Saturation percentage for normalised heatmap (pre-log scaling)
         :param kwargs/pack: Raypack name
@@ -123,7 +125,8 @@ class Simulation2D:
             rx[:, 1] //= -1 * res[1]
 
             # Plot ray heatmap according to ray energy
-            vals = np.power(ray.Tmult, -0.1)
+            ray.populate(1)
+            vals = np.power(ray.Tmult[1], -0.1)  # TODO: need to populate first
             heatmap_ray = coords_to_mask_2d(heatmap_shape, rx, vals)
             heatmap_full += heatmap_ray
 
@@ -137,7 +140,7 @@ class Simulation2D:
     def plot (self, fig, **kwargs):
         """
         :param fig: Figure
-        :param kwargs/pack: Raypack name
+        :param kwargs/pack: Raypack to plot (defaults to default raypack)  # TODO: rename to label
         """
 
         # Get target raypack
@@ -160,7 +163,7 @@ class EigenraySim2D (Simulation2D):
         :param env: Simulation environment
         :param source: Source point
         :param target: Target point
-        :param n_rays: Number of rays (can be exceeded if multiple rays have the same distance)
+        :param n_rays: Number of rays to refine (can be exceeded if multiple rays have the same distance)
         :param n_rebounds_max: Maximum number of rebounds
 
         :param kwargs/spectrum: Power spectrum
@@ -197,7 +200,7 @@ class EigenraySim2D (Simulation2D):
         self.__angular_precision = None
         
         # Initial scan        
-        self.n_rays_scan = kwargs.get('n_rays_scan', self.n_rays * 10)  # TODO: default multiplier
+        self.n_rays_scan = kwargs.get('n_rays_scan', self.n_rays * 10)  # TODO: default multiplier  # TODO: must be >= 2
         self.__scan(kwargs.get('scan_angle_min', None), kwargs.get('scan_angle_max', None))
 
     def __scan (self, angle_min = None, angle_max = None):
@@ -227,24 +230,24 @@ class EigenraySim2D (Simulation2D):
 
         # Calculate angular precision
         if self.verbose: print(f'{self._Simulation2D__vi}Scanning using {self.n_rays_scan} rays between angles {angle_min} and {angle_max}')
-        self.__angular_precision = (angle_max - angle_min) / self.n_rays_scan# / 2  # Cone half-angle  # TODO: ???
+        self.__angular_precision = (angle_max - angle_min) / (self.n_rays_scan - 1)  # / 2  # Cone half-angle  # TODO: ???
 
         # Cast scanning rays
-        self.raypacks[self.pack_temp_scan] = RayPack2D()
+        self.raypacks[self.pack_temp_scan] = RayPack2D()  # TODO: Redundant since raypack is initialized when running Simulation2D.cast
         angles = np.linspace(angle_min, angle_max, self.n_rays_scan)
         self.cast (*angles, pack=self.pack_temp_scan, target=self.target, n_rebounds_max=self.n_rebounds_max, **self.init_kwargs)
         
         # Sort and select rays
         raypack_temp_scan = self.raypacks[self.pack_temp_scan]
         dist_sorted = raypack_temp_scan.dist_sorted
-        if np.isnan(dist_sorted[-1]): dist_sorted = dist_sorted[:-1]
-        rays = list(itertools.chain.from_iterable( itemgetter(*dist_sorted[:self.n_rays])(raypack_temp_scan.dist) ))
+        if np.isnan(dist_sorted[-1]): dist_sorted = dist_sorted[:-1]  # TODO: why?
+        rays = list(itertools.chain.from_iterable( itemgetter(*dist_sorted[:self.n_rays])(raypack_temp_scan.dist) ))  # TODO: what?
 
         # Generate scan output raypack
         self.raypacks[self.pack_scan] = RayPack2D()
         raypack_scan = self.raypacks[self.pack_scan]
         raypack_scan.add(*rays)
-        self.pack_default = self.pack_scan  # Set default raypack
+        self.pack_default = self.pack_scan  # Set latest pack as default raypack
 
         self.dist_avg = np.mean(raypack_scan.dist_sorted)
         if self.verbose: print(f'{self._Simulation2D__vi}Scan mean distance: {self.dist_avg}')
@@ -308,15 +311,14 @@ class EigenraySim2D (Simulation2D):
             self.dist_avg = np.mean(raypack_refine.dist_sorted)
 
             if self.verbose: print(f'{self._Simulation2D__vi}Refine #{self.n_refines} mean distance: {self.dist_avg}')  # if self.verbose
-            self.pack_default = pack_refine  # Set default raypack
+            self.pack_default = pack_refine  # Set latest pack as default raypack
 
-    def get_filter (self, *freqs, **kwargs):
-        """
-        :param kwargs/pack: Pack to generate the filter for
-        # Signal must begin when fastest ray gets there
-        """
+    def get_filter_fourier (self, *freqs, **kwargs):
+        # New version
+
+
         # Load raypack
-        pack = kwargs.get('pack', self.pack_default)
+        pack = kwargs.get('pack', self.pack_default)  # TODO: rename to label
         raypack = self.raypacks [pack]
 
         # Generate aperture percentages
@@ -334,7 +336,7 @@ class EigenraySim2D (Simulation2D):
             ray.populate(*freqs)
 
             # Get ray data
-            offset, filter_func = ray.T_target, ray.calc_Tmult_target
+            offset, filter_func = ray.T_target, ray.calc_Tmult_target  # TODO: move out of Ray2D
             filter_data.append({'offset': offset, 'filter_func': filter_func, 'aperture_mult': aperture_percents[i]})
             offsets.append(offset)
         
@@ -343,7 +345,44 @@ class EigenraySim2D (Simulation2D):
         offset_max = np.max(offsets)
         time_add = offset_max - offset_min
 
-        # Create filtering function  # TODO: multi-channel signals
+
+
+
+
+    def get_filter (self, *freqs, **kwargs):
+        """
+        :param kwargs/pack: Pack to generate the filter for
+        # Signal must begin when fastest ray gets there
+        """
+        # Load raypack
+        pack = kwargs.get('pack', self.pack_default)  # TODO: rename to label
+        raypack = self.raypacks [pack]
+
+        # Generate aperture percentages
+        angles_sorted = np.sort(list(raypack.angles.keys()))
+        diff = np.diff(angles_sorted) / 2
+        aperture_max = np.max(angles_sorted) - np.min(angles_sorted)
+        aperture_left = np.insert(diff, 0, diff[0])
+        aperture_right = np.insert(diff, diff.shape[0], diff[-1])
+        aperture_percents = (aperture_left + aperture_right) / aperture_max
+
+        filter_data, offsets = list(), list()
+        for i, angle in enumerate(angles_sorted):
+            # Populate ray
+            ray = raypack.angles[angle]
+            ray.populate(*freqs)
+
+            # Get ray data
+            offset, filter_func = ray.T_target, ray.calc_Tmult_target  # TODO: move out of Ray2D
+            filter_data.append({'offset': offset, 'filter_func': filter_func, 'aperture_mult': aperture_percents[i]})   # TODO: Add offset to phase
+            offsets.append(offset)
+        
+        # Process ray time offsets
+        offset_min = np.min(offsets)
+        offset_max = np.max(offsets)
+        time_add = offset_max - offset_min
+
+        # Create filtering function  # TODO: multi-channel signals  # TODO: standardized filter format?
         def filter (sample_rate, signal):
             n_samples = signal.shape[0]
             data_add = np.ceil(time_add * sample_rate).astype(int)  # Calculate number of datapoints to add
@@ -355,7 +394,7 @@ class EigenraySim2D (Simulation2D):
 
             for ray_filter in filter_data:
                 # Calculate offset in datapoints
-                time_offset = ray_filter['offset'] - np.min(offsets)
+                time_offset = ray_filter['offset'] - offset_min
                 data_offset = np.ceil(time_offset * sample_rate).astype(int)
 
                 # Apply filter on Fourier transform of signal
@@ -370,3 +409,72 @@ class EigenraySim2D (Simulation2D):
             return sample_rate, signal_filtered
 
         return filter        
+
+
+    def get_filter_NEW (self, *freqs, **kwargs):
+        # Load raypack
+        label = kwargs.get('pack', self.pack_default)  # TODO: rename to label in kwargs
+        raypack = self.raypacks [label]
+
+        # Generate aperture percentages  # TODO: replace with a fixed precision/resolution aperture (linked to the scanning density)
+
+        # Pregenerate filter data
+        filter_data, offsets = list(), list()
+        filters = list()  # List of lists # TODO: Replace with 2D numpy array
+        angles_sorted = np.sort(list(raypack.angles.keys()))  # TODO: Sorting needed?
+        for i, angle in enumerate(angles_sorted):
+            # Populate ray
+            ray = raypack.angles[angle]
+            ray.populate(*freqs)
+
+            # Get ray data
+            offset, filter_func = ray.T_target, ray.calc_Tmult_target  # TODO: move target calculation out of Ray2D
+            #filters.append([offset, ray.calc_Tmult_target()]) # TODO: Normalize to make this sample rate-agnostic
+        
+        # Process ray time offsets
+        offset_min = np.min(offsets)
+        offset_max = np.max(offsets)
+        time_add = offset_max - offset_min
+
+
+        # Create filtering function  # TODO: multi-channel signals  # TODO: standardized filter format?
+        def filter (sample_rate, signal):
+            """_summary_
+
+            Args:
+                sample_rate (_type_): Signal sample rate
+                signal (_type_): Discrete temporal signal sequence
+
+            Returns:
+                _type_: _description_
+            """
+
+            n_samples = signal.shape[0]
+            data_add = np.ceil(time_add * sample_rate).astype(int)  # Calculate number of datapoints to add
+            signal_filtered = np.zeros(n_samples + data_add, dtype=np.float64)
+
+            # Apply Fourier transform to signal
+            yf = fft(signal)
+            xf = fftfreq(n_samples, 1/sample_rate)
+
+            for filter_data in filters:
+                # Calculate offset in datapoints
+                time_offset = filter_data[0] - offset_min
+                data_offset = np.ceil(time_offset * sample_rate).astype(int)
+
+                # Apply filter on Fourier transform of signal
+                filter = ray_filter['filter_func'] (xf)
+                yf_filtered = np.multiply(filter, yf)
+
+                # Add temporal filtered signal to result
+                sig_filt_ray = ifft(yf_filtered).real
+                mult = ray_filter['aperture_mult']
+                signal_filtered [data_offset:data_offset+n_samples] += sig_filt_ray * mult  # TODO: not real? => TODO: return the FILTER as a complex numpy array... or as a numpy filter even, if these exist?
+            
+            return sample_rate, signal_filtered
+
+        return filter        
+
+
+
+# TODO: One ray per angle? seems so
