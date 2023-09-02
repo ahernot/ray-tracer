@@ -37,7 +37,7 @@ class Ray2D:
 
         self.env: Environment2D = env
         self.source: np.ndarray = source
-        self.target: np.ndarray = kwargs.get('target', None)
+        self.target: np.ndarray = kwargs.get('target', None)  # TODO: deprecate self.target globally
         self.angle = angle
 
         # Initialise
@@ -49,7 +49,7 @@ class Ray2D:
         self.G = dict()
         self.Tmult = dict()
         # self.G_target = np.empty((0, 2))
-        self.Tmult_target = np.empty((0, 2))
+        self.Tmult_target = np.empty((0, 2))  # TODO: deprecate
 
         self.range_min = np.zeros(2)
         self.range_max = np.zeros(2)
@@ -115,7 +115,7 @@ class Ray2D:
 
         # Exit if already completed
         if self.__is_propagated:
-            if self.verbose: print(f'{self.__vi}ERROR: Ray already propagated')
+            if self.verbose: print(f'{self.__vi}ERROR: Ray already propagated')  # TODO: Warning
             return
         
         # Initialize variables (kwargs)
@@ -205,6 +205,7 @@ class Ray2D:
                 # Log rebound
                 angle = 1 / ((1 + (k[1]/k[0]) ** 2) ** 0.5)  # TODO: is this the right angle?
                 self.__rebounds.append({'step': i+1, 'surface': 'water-surface', 'velocity': c, 'angle': angle, 'position': P})
+                # TODO: Velocity stored as a 0-d array??
                 self.n_rebounds += 1
 
                 # Stop if last allowed rebound
@@ -289,7 +290,6 @@ class Ray2D:
     def populate (self, *freqs):
 
         for freq in freqs:
-            
             # Check if freq already generated
             if freq in self.freqs: continue
             
@@ -333,7 +333,42 @@ class Ray2D:
             np.concatenate( (self.Tmult_target[::-1, 1], self.Tmult_target[:, 1]) ),
             kind='linear',
             bounds_error=True
-        )
+        )  # TODO: currently only on x-coordinate of the target (dz vertical difference not accounted for)
+
+
+    def closest_step_to_point (self, target: np.ndarray):
+        d_target = np.sqrt(np.power(target[0]-self.XZ[:, 0], 2) + np.power(target[1]-self.XZ[:, 1], 2))
+        return np.argmin(d_target)
+
+    # def dist_to_point (self, target: np.ndarray): 
+    #     # Calculate shortest distance to a point on the ray's path
+
+    #     # TODO: needs to calculate for each phase of the path (between 2 rebounds), then choose point with largest amplitude at 1Hz
+    #     # steps_closest_list = list()
+    #     # step_range_start = 0
+    #     # for rebound in self.__rebounds:
+    #     #     step_range_stop = rebound['step']
+    #     #     step_closest = np.argmin(d_target[step_range_start:step_range_stop]) + step_range_start
+    #     #     steps_closest_list.append(step_closest)
+    #     #     step_range_start = step_range_stop
+    #     # # Add from last rebound to last step
+    #     # steps_closest_list.append (np.argmin(d_target[step_range_start:]) + step_range_start)
+    #     # print(steps_closest_list)
+    #     # for s in steps_closest_list:
+    #     #     print(self.XZ[s])
+        
+    #     step = self.closest_step_to_point(target)
+    #     return np.linalg.norm(target - self.XZ[step])
+
+
+    def filter (self, target) -> dict:
+        # Returns an offset (seconds) and a 
+
+
+        {
+            'time_to_target_seconds': 0.,
+            'filter_points': np.zeroes(100)
+        }
 
 
 class RayPack2D:
