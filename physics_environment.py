@@ -42,7 +42,7 @@ class PhysicsEnvironment2D:
         :param res_x: horizontal resolution (in meters)
         :param res_z: vertical resolution (in meters)
         """
-        # ! UNIDIRECTIONIAL FOR NOW (functions of z as only spatial dimension)
+        #! UNIDIRECTIONIAL FOR NOW (functions of z as only spatial dimension)
 
         self.res_x = kwargs.get('res_x', RES_X_DEFAULT)  # Default is x-invariant  # TODO: set default values
         self.res_z = kwargs.get('res_z', RES_Z_DEFAULT)  # TODO: set default values
