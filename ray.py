@@ -369,38 +369,15 @@ class Ray2D:
         self.freqs.sort()
 
 
-    def closest_step_to_point (self, target: np.ndarray):
+    def closest_step_to_point (self, target: np.ndarray):  # Calculate closest approach
         d_target = np.sqrt(np.power(target[0]-self.XZ[:, 0], 2) + np.power(target[1]-self.XZ[:, 1], 2))
         return np.argmin(d_target)
+    
+    def point (self, step: int) -> np.ndarray:  # Point coordinates at step
+        return self.XZ[step]
 
-
-    def filter (self, target: np.ndarray) -> dict:
-
-        # Calculate closest simulation step to the target point
-        step_target = self.closest_step_to_point(target)  # TODO: approximation as closest step (no interpolation)
-        
-        # Retrieve gain at target for each frequency
-        G_target = np.array([ self.G[freq][step_target] for freq in self.freqs ])  # self.freqs is sorted
-
-        # TODO: Add the estimated gain between target and path (d_target x dG)
-
-        # Calculate transmittance multiplier at target for each frequency
-        Tmult_target = np.power(10, G_target / 10)
-
-        # Generate interpolated function
-        # calc_Tmult_target = interpolate.interp1d(
-        #     np.concatenate( (-1 * np.array(self.freqs[::-1]), np.array(self.freqs) )),  # TODO: Include negative frequencies?
-        #     Tmult_target[::-1] + Tmult_target,
-        #     kind='linear',
-        #     bounds_error=True
-        # )
-
-        return Tmult_target
-
-        # {
-        #     'time_to_target_seconds': 0.,
-        #     'filter_points': np.zeros(100)
-        # }
+    def gain (self, step: int) -> np.ndarray:  # Gain array (for each populated freq) at step
+        return np.array([ self.G[freq][step] for freq in self.freqs ])  # NOTE: self.freqs is sorted
 
 
     # def dist_to_point (self, target: np.ndarray): 
