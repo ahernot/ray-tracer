@@ -43,11 +43,11 @@ class Ray2D:
         # Initialise
         self.XZ = np.expand_dims(self.source.copy(), axis=0)
         self.T = np.array([0.,])
-        self.steps = 1
+        self.steps = 1  # TODO: rename to self.n_steps
 
         self.freqs = list()
         self.G = dict()
-        self.Tmult = dict()
+        self.Tmult = dict()  # TODO: deprecate
         # self.G_target = np.empty((0, 2))
         self.Tmult_target = np.empty((0, 2))  # TODO: deprecate
 
@@ -55,12 +55,13 @@ class Ray2D:
         self.range_max = np.zeros(2)
 
     def __repr__ (self):
-        repr_list = [
-            f'{"Propagated " if self.__is_propagated else ""}{self.__class__.__name__} object cast from {self.source} {f"to target {self.target} " if self.target is not None else ""}at angle {self.angle} rad',
-            f'\tStop reason: {self.stop_reason}' if self.stop_reason else '',
-            f'\tDistance to target: {self.dist_to_target} m' if self.dist_to_target else ''
-        ]
-        return '\n'.join(repr_list)
+        return f'Ray2D ({self.source}, {self.angle})'
+        # repr_list = [
+        #     f'{"Propagated " if self.__is_propagated else ""}{self.__class__.__name__} object cast from {self.source} {f"to target {self.target} " if self.target is not None else ""}at angle {self.angle} rad',
+        #     f'\tStop reason: {self.stop_reason}' if self.stop_reason else '',
+        #     f'\tDistance to target: {self.dist_to_target} m' if self.dist_to_target else ''
+        # ]
+        # return '\n'.join(repr_list)
 
     def plot (self, fig, **kwargs):  # TODO: Plot gain: self.L, self.G[freq]
         if self.__is_propagated:
@@ -335,10 +336,72 @@ class Ray2D:
             bounds_error=True
         )  # TODO: currently only on x-coordinate of the target (dz vertical difference not accounted for)
 
+    def populate_NEW (self, *freqs):
+
+        for freq in freqs:
+            # Check if freq already generated
+            if freq in self.freqs: continue
+            
+            # Calculate base gain for each point
+            dG = -1 * self.env.penv.calc_dl_dG(freq, self.XZ[:-1, 1]) / 1000 * self.dL  # dG for each dL (decibels)
+            G = np.cumsum(np.insert(dG, 0, 0.))  # Cumulative gain for each point (decibels)
+
+            # Process rebounds
+            for rebound in self.__rebounds:
+
+                wavelength = rebound['velocity'] / freq
+                if rebound['surface'] == 'sediment':
+                    z = rebound['position'][1]
+                    refcoef = calc_refcoef_sediment(wavelength=wavelength, Zp0=self.env.penv.calc_Z(z))
+                elif rebound['surface'] == 'water-surface':
+                    angle = rebound['angle']
+                    refcoef = calc_refcoef_surface(wavelength=wavelength, angle=angle)
+
+                G_add = np.zeros(self.steps, dtype=float)
+                G_add[rebound['step']+1:] = 10 * np.log10(refcoef)
+                G += G_add
+
+            # Save values
+            self.G[freq] = G
+            self.freqs.append(freq)
+        
+        # Sort frequencies
+        self.freqs.sort()
+
 
     def closest_step_to_point (self, target: np.ndarray):
         d_target = np.sqrt(np.power(target[0]-self.XZ[:, 0], 2) + np.power(target[1]-self.XZ[:, 1], 2))
         return np.argmin(d_target)
+
+
+    def filter (self, target: np.ndarray) -> dict:
+
+        # Calculate closest simulation step to the target point
+        step_target = self.closest_step_to_point(target)  # TODO: approximation as closest step (no interpolation)
+        
+        # Retrieve gain at target for each frequency
+        G_target = np.array([ self.G[freq][step_target] for freq in self.freqs ])  # self.freqs is sorted
+
+        # TODO: Add the estimated gain between target and path (d_target x dG)
+
+        # Calculate transmittance multiplier at target for each frequency
+        Tmult_target = np.power(10, G_target / 10)
+
+        # Generate interpolated function
+        # calc_Tmult_target = interpolate.interp1d(
+        #     np.concatenate( (-1 * np.array(self.freqs[::-1]), np.array(self.freqs) )),  # TODO: Include negative frequencies?
+        #     Tmult_target[::-1] + Tmult_target,
+        #     kind='linear',
+        #     bounds_error=True
+        # )
+
+        return Tmult_target
+
+        # {
+        #     'time_to_target_seconds': 0.,
+        #     'filter_points': np.zeros(100)
+        # }
+
 
     # def dist_to_point (self, target: np.ndarray): 
     #     # Calculate shortest distance to a point on the ray's path
@@ -361,14 +424,6 @@ class Ray2D:
     #     return np.linalg.norm(target - self.XZ[step])
 
 
-    def filter (self, target) -> dict:
-        # Returns an offset (seconds) and a 
-
-
-        {
-            'time_to_target_seconds': 0.,
-            'filter_points': np.zeroes(100)
-        }
 
 
 class RayPack2D:
