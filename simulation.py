@@ -19,7 +19,7 @@ import cmath
 from operator import itemgetter
 import itertools
 
-from functions import coords_to_mask_2d
+# from functions import coords_to_mask_2d
 
 from environment import Environment2D
 from ray import Ray2D, RayPack2D
