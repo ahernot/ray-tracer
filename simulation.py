@@ -93,49 +93,49 @@ class Simulation2D:
             ray.propagate(**kwargs)
             raypack.add(ray)
 
-    def heatmap (self, **kwargs):
-        # DEPRECATED FUNCTION
-        """
-        Generate heatmap of ray power
-        kwargs
-        :param resolution (array, x and y): Resolution (in meters) - # TODO? must be less precise than the simulation's max dz and dx
-        :param n_reductions:
-        :param cutoff: Saturation percentage for normalised heatmap (pre-log scaling)
-        :param kwargs/pack: Raypack name
-        """
+    # def heatmap (self, **kwargs):
+    #     # DEPRECATED FUNCTION
+    #     """
+    #     Generate heatmap of ray power
+    #     kwargs
+    #     :param resolution (array, x and y): Resolution (in meters) - # TODO? must be less precise than the simulation's max dz and dx
+    #     :param n_reductions:
+    #     :param cutoff: Saturation percentage for normalised heatmap (pre-log scaling)
+    #     :param kwargs/pack: Raypack name
+    #     """
 
-        # Get heatmap parameters
-        res = kwargs.get('resolution', np.array([50, 25]))
-        reduction_power = kwargs.get('reduction_power', .5)
-        cutoff = kwargs.get('cutoff', .02)
+    #     # Get heatmap parameters
+    #     res = kwargs.get('resolution', np.array([50, 25]))
+    #     reduction_power = kwargs.get('reduction_power', .5)
+    #     cutoff = kwargs.get('cutoff', .02)
         
-        # Get target raypack
-        pack = kwargs.get('pack', self.pack_default)
-        raypack = self.raypacks[pack]
+    #     # Get target raypack
+    #     pack = kwargs.get('pack', self.pack_default)
+    #     raypack = self.raypacks[pack]
 
-        # Initialise heatmap
-        heatmap_shape = np.ceil(raypack.size_plot/res).astype(int) + 1  # +1 because the downsampling of the coordinates is right bound inclusive
-        heatmap_full = np.zeros((heatmap_shape))
+    #     # Initialise heatmap
+    #     heatmap_shape = np.ceil(raypack.size_plot/res).astype(int) + 1  # +1 because the downsampling of the coordinates is right bound inclusive
+    #     heatmap_full = np.zeros((heatmap_shape))
 
-        for ray in raypack.rays:
+    #     for ray in raypack.rays:
 
-            # Generate array of downsampled coordinates of shape (N, 2) = ray.XZ.shape and convert from physical coordinates to matrix coordinates (inverting y-axis)
-            rx = ray.XZ.copy().astype(int)
-            rx[:, 0] //= res[0]
-            rx[:, 1] //= -1 * res[1]
+    #         # Generate array of downsampled coordinates of shape (N, 2) = ray.XZ.shape and convert from physical coordinates to matrix coordinates (inverting y-axis)
+    #         rx = ray.XZ.copy().astype(int)
+    #         rx[:, 0] //= res[0]
+    #         rx[:, 1] //= -1 * res[1]
 
-            # Plot ray heatmap according to ray energy
-            ray.populate(1)
-            vals = np.power(ray.Tmult[1], -0.1)  # TODO: need to populate first
-            heatmap_ray = coords_to_mask_2d(heatmap_shape, rx, vals)
-            heatmap_full += heatmap_ray
+    #         # Plot ray heatmap according to ray energy
+    #         ray.populate(1)
+    #         vals = np.power(ray.Tmult[1], -0.1)  # TODO: need to populate first
+    #         heatmap_ray = coords_to_mask_2d(heatmap_shape, rx, vals)
+    #         heatmap_full += heatmap_ray
 
-        # Normalise heatmap
-        heatmap_norm = heatmap_full / np.max(heatmap_full)
-        heatmap_norm[heatmap_norm > cutoff] = cutoff
-        heatmap_plot = np.power(heatmap_norm, reduction_power) if reduction_power != 1 else heatmap_norm
+    #     # Normalise heatmap
+    #     heatmap_norm = heatmap_full / np.max(heatmap_full)
+    #     heatmap_norm[heatmap_norm > cutoff] = cutoff
+    #     heatmap_plot = np.power(heatmap_norm, reduction_power) if reduction_power != 1 else heatmap_norm
 
-        return heatmap_plot.T
+    #     return heatmap_plot.T
 
     def plot (self, fig, **kwargs):
         """
