@@ -316,7 +316,6 @@ class EigenraySim2D (Simulation2D):
     def get_filter_fourier (self, *freqs, **kwargs):
         # New version
 
-
         # Load raypack
         pack = kwargs.get('pack', self.pack_default)  # TODO: rename to label
         raypack = self.raypacks [pack]
@@ -344,9 +343,6 @@ class EigenraySim2D (Simulation2D):
         offset_min = np.min(offsets)
         offset_max = np.max(offsets)
         time_add = offset_max - offset_min
-
-
-
 
 
     def get_filter (self, *freqs, **kwargs):
@@ -415,27 +411,31 @@ class EigenraySim2D (Simulation2D):
         # Load raypack
         label = kwargs.get('pack', self.pack_default)  # TODO: rename to label in kwargs
         raypack = self.raypacks [label]
+        rf = np.array(freqs)
 
         # Generate aperture percentages  # TODO: replace with a fixed precision/resolution aperture (linked to the scanning density)
 
         # Pregenerate filter data
-        filter_data, offsets = list(), list()
-        filters = list()  # List of lists # TODO: Replace with 2D numpy array
         angles_sorted = np.sort(list(raypack.angles.keys()))  # TODO: Sorting needed?
-        for i, angle in enumerate(angles_sorted):
+
+        T_target_dict = dict()
+        Tmult_target_dict = dict()
+        for angle in angles_sorted:
             # Populate ray
             ray = raypack.angles[angle]
             ray.populate(*freqs)
 
-            # Get ray data
-            offset, filter_func = ray.T_target, ray.calc_Tmult_target  # TODO: move target calculation out of Ray2D
-            #filters.append([offset, ray.calc_Tmult_target()]) # TODO: Normalize to make this sample rate-agnostic
-        
-        # Process ray time offsets
-        offset_min = np.min(offsets)
-        offset_max = np.max(offsets)
-        time_add = offset_max - offset_min
+            # Generate ray filter data
+            T_target, Tmult_target = ray.generate_filter(self.target)
 
+            # Save ray filter data
+            T_target_dict[angle] = T_target
+            Tmult_target_dict[angle] = Tmult_target
+
+        # Process ray time offsets
+        T_target_min = np.min(list(T_target_dict.values()))
+        T_target_max = np.max(list(T_target_dict.values()))
+        T_stretch_total = T_target_max - T_target_min
 
         # Create filtering function  # TODO: multi-channel signals  # TODO: standardized filter format?
         def filter (sample_rate, signal):
@@ -450,31 +450,31 @@ class EigenraySim2D (Simulation2D):
             """
 
             n_samples = signal.shape[0]
-            data_add = np.ceil(time_add * sample_rate).astype(int)  # Calculate number of datapoints to add
+            data_add = np.ceil(T_stretch_total * sample_rate).astype(int)  # Calculate number of datapoints to add
             signal_filtered = np.zeros(n_samples + data_add, dtype=np.float64)
 
             # Apply Fourier transform to signal
             yf = fft(signal)
             xf = fftfreq(n_samples, 1/sample_rate)
 
-            for filter_data in filters:
+            for angle in angles_sorted:
+                # Unpack filter data
+                T_target = T_target_dict[angle]
+                Tmult_target = Tmult_target_dict[angle]
+
                 # Calculate offset in datapoints
-                time_offset = filter_data[0] - offset_min
+                time_offset = T_target - T_target_min
                 data_offset = np.ceil(time_offset * sample_rate).astype(int)
 
                 # Apply filter on Fourier transform of signal
-                filter = ray_filter['filter_func'] (xf)
-                yf_filtered = np.multiply(filter, yf)
+                Tmult_target_interp = np.interp(xf, np.concatenate((-1 * rf[::-1], rf)), np.concatenate((Tmult_target[::-1], Tmult_target)))
+                yf_filtered = np.multiply(Tmult_target_interp, yf)
 
                 # Add temporal filtered signal to result
                 sig_filt_ray = ifft(yf_filtered).real
-                mult = ray_filter['aperture_mult']
-                signal_filtered [data_offset:data_offset+n_samples] += sig_filt_ray * mult  # TODO: not real? => TODO: return the FILTER as a complex numpy array... or as a numpy filter even, if these exist?
+                mult = 1.  # ray_filter['aperture_mult']  # TODO: aperture multiplier
+                signal_filtered [data_offset:data_offset+n_samples] += sig_filt_ray * mult
             
             return sample_rate, signal_filtered
 
-        return filter        
-
-
-
-# TODO: One ray per angle? seems so
+        return filter
