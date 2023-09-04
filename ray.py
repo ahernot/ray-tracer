@@ -379,6 +379,30 @@ class Ray2D:
     def gain (self, step: int) -> np.ndarray:  # Gain array (for each populated freq) at step
         return np.array([ self.G[freq][step] for freq in self.freqs ])  # NOTE: self.freqs is sorted
 
+    def gen_filter (self, target: np.ndarray):
+        # Calculate closest simulation step to the target point
+        step_target = self.closest_step_to_point(target)  # NOTE: approximation as closest step (no interpolation)
+        p = self.point(step_target)
+        d_target = np.linalg.norm(target - p)
+
+        # Estimate gain between closest approach and target (straight line, average depth) for each frequency
+        midpoint = (target + p) / 2
+        z_avg = midpoint[1]
+        G_add = -1 * self.env.penv.calc_dl_dG(np.array(self.freqs), z_avg) / 1000 * d_target
+
+        # Calculate full gain at target for each frequency
+        G_target = self.gain(step_target) + G_add
+
+        # Calculate transmittance multiplier at target for each frequency
+        Tmult_target = np.power(10, G_target / 10)
+
+        # Estimate travel time between closest approach and target (straight line, average depth)
+        T_add = d_target / self.env.penv.calc_c(z_avg)
+
+        # Calculate full travel time between origin and target
+        T_target = self.T[step_target] + T_add
+
+        return T_target, Tmult_target
 
     # def dist_to_point (self, target: np.ndarray): 
     #     # Calculate shortest distance to a point on the ray's path
