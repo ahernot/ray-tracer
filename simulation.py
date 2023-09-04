@@ -423,10 +423,10 @@ class EigenraySim2D (Simulation2D):
         for angle in angles_sorted:
             # Populate ray
             ray = raypack.angles[angle]
-            ray.populate(*freqs)
+            ray.populate_NEW(*freqs)
 
             # Generate ray filter data
-            T_target, Tmult_target = ray.generate_filter(self.target)
+            T_target, Tmult_target = ray.gen_filter(self.target)
 
             # Save ray filter data
             T_target_dict[angle] = T_target
@@ -472,7 +472,7 @@ class EigenraySim2D (Simulation2D):
 
                 # Add temporal filtered signal to result
                 sig_filt_ray = ifft(yf_filtered).real
-                mult = 1.  # ray_filter['aperture_mult']  # TODO: aperture multiplier
+                mult = 0.01  # ray_filter['aperture_mult']  # TODO: aperture multiplier
                 signal_filtered [data_offset:data_offset+n_samples] += sig_filt_ray * mult
             
             return sample_rate, signal_filtered
