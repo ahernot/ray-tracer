@@ -158,7 +158,7 @@ class Ray2D:
 
 
 
-            # Check simulation horizontal bounds (for horizotnally-interpolated functions)
+            # Check simulation horizontal bounds (for horizontally-interpolated functions)
             x_new_temp, z_new_temp, out = fit_to_bounds (x, x_new, z, z_new, dx_z)
             if out in (1, 2):
                 x_new, z_new = x_new_temp, z_new_temp
