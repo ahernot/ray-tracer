@@ -79,7 +79,7 @@ class PhysicsEnvironment2D:
         # Absorption (keep full frequency resolution, interpolate spatially)
         self.__dl_dG_coefs = physics.model_absorption.calc_dl_dG_coefs (self.z, self.T, self.S, self.pH)
         self.__calc_dl_dG_coefs_interp = interpolate.interp1d (self.z, self.__dl_dG_coefs, axis=1, kind='quadratic', bounds_error=False, fill_value='extrapolate')
-        self.calc_dl_dG = lambda f, z: physics.model_absorption.calc_dl_dG (f, z, self.__calc_dl_dG_coefs_interp)
+        self.calc_dl_dG = lambda f, z: physics.model_absorption.calc_dl_dG (f, z, self.__calc_dl_dG_coefs_interp)  # TODO: interp on dl not dz??
 
         # Impedance
         self.Z = physics.model_impedance.calc_Z(self.rho, self.c)

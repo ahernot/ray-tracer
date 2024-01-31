@@ -17,7 +17,18 @@ def calc_dl_dG_coefs (z, T, S, pH):
 
 
 def calc_dl_dG (f: float, z: float, calc_dz_dG_coefs_interp):
-    f1, f2, A2, E1, E2, E3 = calc_dz_dG_coefs_interp(z)
+    """_summary_
+
+    Args:
+        f (float): Frequenty (in Hz)
+        z (float): _description_
+        calc_dz_dG_coefs_interp (_type_): _description_
+
+    Returns:
+        _type_: _description_
+    """
+    
+    f1, f2, A2, E1, E2, E3 = calc_dz_dG_coefs_interp(z)  # TODO: calculation using z
     f /= 1000   # to get f in kHz for the formula
 
     A1 = 0.106
