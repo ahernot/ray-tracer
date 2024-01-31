@@ -22,6 +22,8 @@ Sound rays…
 
 ### Rebound calculation
 Stuff
+TODO: Write equation…
+TODO: refactor code (./src)
 
 ### Ray focusing
 * Initial sweep
