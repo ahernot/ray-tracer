@@ -8,4 +8,5 @@ import numpy as np
 
 S = 35
 
-calc_S = lambda z: np.ones_like(z) * S
+def calc_S (z):
+    return np.ones_like(z) * S
