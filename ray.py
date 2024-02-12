@@ -85,7 +85,7 @@ class Ray2D:
             _out = 0
 
             # Check simulation horizontal bounds
-            if x < self.env.range_min[0]:
+            if x_new < self.env.range_min[0]:
                 x_new = self.env.range_min[0]
                 z_new = -1 * dx_z * (x_new - x_prev) + z_prev  # Only hit when going left (x_dir = -1)
                 _out = 1
@@ -174,7 +174,7 @@ class Ray2D:
 
             # Check floor rebounds
             if self.env.floor and z_new < z_floor_projection:
-                x_new = float( fsolve( lambda x1: self.env.floor(x) - dx_z * (x1 - x) - z, x0=x ))
+                x_new = float( fsolve( lambda x1: self.env.floor(x) - dx_z * (x1 - x) - z, x0=x ))  # TODO: Remove lambda function for pickling
                 z_new = z_floor_projection
                 u = np.array([1., self.env.dx_floor(x_new)])  # Direction of floor
                 n = np.array([-1*u[1], u[0]])  # Normal of floor, going up
@@ -197,7 +197,7 @@ class Ray2D:
 
             # Check ceiling rebounds
             elif self.env.ceil and z_new > z_ceil_projection:
-                x_new = float( fsolve( lambda x1: self.env.ceil(x) - dx_z * (x1 - x) - z, x0=x ))
+                x_new = float( fsolve( lambda x1: self.env.ceil(x) - dx_z * (x1 - x) - z, x0=x ))  # TODO: Remove lambda function for pickling
                 z_new = z_ceil_projection
                 u = np.array([1., self.env.dx_ceil(x_new)])  # Direction of ceiling
                 n = np.array([u[1], -1*u[0]])  # Normal of ceiling, going down
