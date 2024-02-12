@@ -84,3 +84,6 @@ class PhysicsEnvironment2D:
         # Impedance
         self.Z = physics.model_impedance.calc_Z(self.rho, self.c)
         self.calc_Z = interpolate.interp1d(self.z, self.Z, kind='quadratic', bounds_error=False, fill_value='extrapolate')
+
+    # def calc_dl_dG (self, f, z):  #! Replace lambda func for pickling (test)
+    #         return physics.model_absorption.calc_dl_dG (f, z, self.__calc_dl_dG_coefs_interp)
