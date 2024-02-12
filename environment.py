@@ -8,6 +8,7 @@
 
 import numpy as np
 import matplotlib.pyplot as plt
+from typing import Union
 
 from scipy import interpolate
 
@@ -59,6 +60,31 @@ class Environment2D:
         plt.plot(self.penv.x, self.__ceil_sampled, figure=fig, **kwargs)
         plt.plot(self.penv.x, self.__floor_sampled, figure=fig, **kwargs)
 
+    def fit_to_bounds (self, x_prev, x_new, z_prev, z_new, dx_z) -> Union[float, float, str]:
+        out_vals = ['', 'exit-xmin', 'exit-xmax', 'exit-zmin', 'exit-zmax']
+        _out = 0
+
+        # Check simulation horizontal bounds
+        if x_new < self.range_min[0]:
+            x_new = self.range_min[0]
+            z_new = -1 * dx_z * (x_new - x_prev) + z_prev  # Only hit when going left (x_dir = -1)
+            _out = 1
+        elif x_new > self.range_max[0]:
+            x_new = self.range_max[0]
+            z_new = dx_z * (x_new - x_prev) + z_prev  # Only hit when going right (x_dir = 1)
+            _out = 2 
+        
+        # Check simulation vertical bounds (shouldn't be needed because of rebounds)
+        if z_new < self.range_min[1]:
+            z_new = self.range_min[1]
+            x_new = x_dir * (z_new - z_prev) / dx_z + x_prev
+            _out = 3
+        elif z_new > self.range_max[1]:
+            z_new = self.range_max[1]
+            x_new = x_dir * (z_new - z_prev) / dx_z + x_prev
+            _out = 4
+        
+        return x_new, z_new, out_vals[_out]
 
 
 # class EnvironmentStatic (Environment):
